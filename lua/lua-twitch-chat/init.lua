@@ -1,8 +1,8 @@
-function setup()
+local function setup()
   print("setup")
 end
 
-function test()
+local function test()
   print("test")
 end
 
