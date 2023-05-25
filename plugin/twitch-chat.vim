@@ -1,3 +1,4 @@
+echo "wtf"
 " Load only once
 if exists('g:loaded_twitch_chat') | finish | endif
 
