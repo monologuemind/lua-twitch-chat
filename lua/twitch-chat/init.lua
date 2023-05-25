@@ -1,1 +1,7 @@
-print("sup")
+function setup()
+  print("setup")
+end
+
+return {
+  setup = setup
+}
