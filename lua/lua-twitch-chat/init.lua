@@ -6,8 +6,8 @@ local function test()
   print("test")
 end
 
-local table = {}
-table.test = test
-table.setup = setup
+local myTable = {}
+myTable.test = test
+myTable.setup = setup
 
-return table
+return myTable
