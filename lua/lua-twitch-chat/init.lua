@@ -63,8 +63,6 @@ local function open()
   win = api.nvim_open_win(buf, true, opts)
 end
 
-test()
-
 myTable.test = test
 myTable.open = open
 
