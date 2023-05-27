@@ -28,7 +28,7 @@ local function test()
   --   local f = file:read("*a")
   --   print("f", f)
   -- end
-  local what = io.popen(myTable.settings.file)
+  local what = io.popen(myTable.settings.file, "r")
   print("what", what)
   if what then
     local huh = what:read("*a")
