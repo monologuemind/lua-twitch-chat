@@ -14,7 +14,13 @@
 --   twitch_client_secret = nil
 -- }
 
+local myTable = {}
+myTable.settings = {
+  file = ""
+}
+
 local function test()
+  print(myTable.settings.file)
   local file = io.open("init.lua", "r")
   print(file)
   if file then
@@ -59,12 +65,8 @@ end
 
 test()
 
-local myTable = {}
 myTable.test = test
 myTable.open = open
-myTable.settings = {
-  file = ""
-}
 
 
 return myTable
