@@ -29,6 +29,7 @@ local function test()
   --   print("f", f)
   -- end
   local what = io.popen(myTable.settings.file)
+  print("what", what)
   if what then
     print(what:read("*a"))
   end
