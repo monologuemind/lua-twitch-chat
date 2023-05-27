@@ -31,7 +31,8 @@ local function test()
   local what = io.popen(myTable.settings.file)
   print("what", what)
   if what then
-    print(what:read("*a"))
+    local huh = what:read("*a")
+    print("huh", huh)
   end
 
   print("test")
