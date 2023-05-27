@@ -21,13 +21,18 @@ myTable.settings = {
 
 local function test()
   print("top")
-  print(myTable.settings.file)
-  local file = io.open(myTable.settings.file, "r")
-  print(file)
-  if file then
-    local f = file:read("*a")
-    print("f", f)
+  -- print(myTable.settings.file)
+  -- local file = io.open(myTable.settings.file, "r")
+  -- print(file)
+  -- if file then
+  --   local f = file:read("*a")
+  --   print("f", f)
+  -- end
+  local what = io.popen(myTable.settings.file)
+  if what then
+    print(what:read("*a"))
   end
+
   print("test")
 end
 
