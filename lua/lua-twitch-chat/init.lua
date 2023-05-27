@@ -20,8 +20,9 @@ myTable.settings = {
 }
 
 local function test()
+  print("top")
   print(myTable.settings.file)
-  local file = io.open("init.lua", "r")
+  local file = io.open(myTable.settings.file, "r")
   print(file)
   if file then
     local f = file:read("*a")
