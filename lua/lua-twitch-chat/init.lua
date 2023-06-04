@@ -14,29 +14,35 @@ local function tablelength(T)
   return count
 end
 
-myTable = {}
-myTable.settings = {
+-- Initialize the channel
+if not Twitch_JobId then
+  Twitch_JobId = 0
+end
+
+-- Constants for RPC messages
+Twitch_Oauth = 'oauth'
+Twitch_Init = 'init'
+Twitch_Test = 'test'
+
+-- The path to the binary that was created out of 'cargo build' or 'cargo build --release'. This will generally be 'target/release/name'
+Target_Application = '/home/michaelbuser/Documents/git/nvim-plugins/lua-twitch-chat/sample/target/debug/sample'
+
+-- Initialize RPC
+function InitTwitchRpc()
+  if Twitch_JobId == 0 then
+    Twitch_JobId = vim.fn.jobstart(Target_Application, { rpc = true })
+  end
+end
+
+MyTable = {}
+MyTable.settings = {
   file = "/home/michaelbuser/Documents/git/nvim-plugins/lua-twitch-chat/socket/target/debug/socket",
   -- file = nil,
   thread = nil
 }
 
 
-myTable.setup = function()
-  -- Initialize the channel
-  if not Twitch_JobId then
-    Twitch_JobId = 0
-  end
-
-  -- Constants for RPC messages
-  Twitch_Oauth = 'oauth'
-  Twitch_Init = 'init'
-  Twitch_Test = 'test'
-
-  -- The path to the binary that was created out of 'cargo build' or 'cargo build --release'. This will generally be 'target/release/name'
-  Target_Application = '/home/michaelbuser/Documents/git/nvim-plugins/lua-twitch-chat/sample/target/debug/sample'
-
-
+MyTable.setup = function()
   local function configureCommands()
     vim.api.nvim_create_user_command("TwitchTest", function()
       print("testing")
@@ -72,19 +78,10 @@ myTable.setup = function()
       end
     end, { nargs = "?" })
   end
-  -- Initialize RPC
-  local function initRpc()
-    if Twitch_JobId == 0 then
-      local jobid = vim.fn.jobstart({ Target_Application }, { rpc = true })
-      return jobid
-    else
-      return Twitch_JobId
-    end
-  end
 
   -- Entry point. Initialize RPC. If it succeeds, then attach commands to the `rpcnotify` invocations.
   local function connect()
-    local id = initRpc()
+    local id = InitTwitchRpc()
 
     if id == 0 then
       print("Twitch: cannot start rpc process")
@@ -114,4 +111,4 @@ myTable.setup = function()
   connect()
 end
 
-return myTable
+return MyTable
