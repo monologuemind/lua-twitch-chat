@@ -27,6 +27,46 @@ Twitch_Test = 'test'
 -- The path to the binary that was created out of 'cargo build' or 'cargo build --release'. This will generally be 'target/release/name'
 Target_Application = '/home/michaelbuser/Documents/git/nvim-plugins/lua-twitch-chat/socket/target/debug/socket'
 
+MyTable = {}
+-- MyTable.settings = {
+--   file = "/home/michaelbuser/Documents/git/nvim-plugins/lua-twitch-chat/socket/target/debug/socket",
+--   -- file = nil,
+--   thread = nil
+-- }
+
+function ConfigureCommands()
+  vim.api.nvim_create_user_command("TwitchTest", function()
+    vim.rpcnotify(Twitch_JobId, Twitch_Test)
+  end, {})
+  vim.api.nvim_create_user_command("TwitchInit", function(opts)
+    local args = splitString(opts.args or "", " ")
+
+    if tablelength(args) ~= 3 then
+      vim.notify("TwitchInit requires only 3 arguments: nickname client_id port", vim.log.levels.ERROR)
+      return
+    end
+
+    vim.rpcnotify(Twitch_JobId, Twitch_Init, args)
+  end, { nargs = "?" })
+
+  vim.api.nvim_create_user_command("TwitchOAuth", function()
+    vim.rpcnotify(Twitch_JobId, Twitch_Oauth)
+  end, { nargs = "?" })
+
+  vim.api.nvim_create_user_command("TwitchJoin", function(opts)
+    local args = splitString(opts.args or "", " ")
+
+    if tablelength(args) == 0 then
+      vim.notify("No arguments passed", vim.log.levels.ERROR)
+      return
+    end
+
+    -- for _, value in pairs(args) do
+    --   print(value)
+    -- end
+  end, { nargs = "?" })
+end
+
 -- Initialize RPC
 function InitTwitchRpc()
   if Twitch_JobId == 0 then
@@ -34,61 +74,20 @@ function InitTwitchRpc()
   end
 end
 
-MyTable = {}
-MyTable.settings = {
-  file = "/home/michaelbuser/Documents/git/nvim-plugins/lua-twitch-chat/socket/target/debug/socket",
-  -- file = nil,
-  thread = nil
-}
+-- Entry point. Initialize RPC. If it succeeds, then attach commands to the `rpcnotify` invocations.
+function Connect()
+  InitTwitchRpc()
 
+  if Twitch_JobId == 0 then
+    print("Twitch: cannot start rpc process")
+  elseif Twitch_JobId == -1 then
+    print("Twitch: rpc process is not executable")
+  else
+    ConfigureCommands()
+  end
+end
 
 MyTable.setup = function()
-  local function configureCommands()
-    vim.api.nvim_create_user_command("TwitchTest", function()
-      vim.rpcnotify(Twitch_JobId, Twitch_Test)
-    end, {})
-    vim.api.nvim_create_user_command("TwitchInit", function(opts)
-      local args = splitString(opts.args or "", " ")
-
-      if tablelength(args) ~= 3 then
-        vim.notify("TwitchInit requires only 3 arguments: nickname client_id port", vim.log.levels.ERROR)
-        return
-      end
-
-      vim.rpcnotify(Twitch_JobId, Twitch_Init, args)
-    end, { nargs = "?" })
-
-    vim.api.nvim_create_user_command("TwitchOAuth", function()
-      vim.rpcnotify(Twitch_JobId, Twitch_Oauth)
-    end, { nargs = "?" })
-
-    vim.api.nvim_create_user_command("TwitchJoin", function(opts)
-      local args = splitString(opts.args or "", " ")
-
-      if tablelength(args) == 0 then
-        vim.notify("No arguments passed", vim.log.levels.ERROR)
-        return
-      end
-
-      -- for _, value in pairs(args) do
-      --   print(value)
-      -- end
-    end, { nargs = "?" })
-  end
-
-  -- Entry point. Initialize RPC. If it succeeds, then attach commands to the `rpcnotify` invocations.
-  local function connect()
-    InitTwitchRpc()
-
-    if Twitch_JobId == 0 then
-      print("Twitch: cannot start rpc process")
-    elseif Twitch_JobId == -1 then
-      print("Twitch: rpc process is not executable")
-    else
-      configureCommands()
-    end
-  end
-
   -- Setting up the exit of the editor to also stop the socket
   local twitch_group = vim.api.nvim_create_augroup("TwitchSocket", { clear = true })
   vim.api.nvim_create_autocmd("ExitPre", {
@@ -100,7 +99,7 @@ MyTable.setup = function()
     end
   })
 
-  connect()
+  Connect()
 end
 
 return MyTable
