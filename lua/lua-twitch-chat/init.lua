@@ -81,18 +81,13 @@ MyTable.setup = function()
 
   -- Entry point. Initialize RPC. If it succeeds, then attach commands to the `rpcnotify` invocations.
   local function connect()
-    local id = InitTwitchRpc()
+    InitTwitchRpc()
 
-    if id == 0 then
+    if Twitch_JobId == 0 then
       print("Twitch: cannot start rpc process")
-    elseif id == -1 then
+    elseif Twitch_JobId == -1 then
       print("Twitch: rpc process is not executable")
     else
-      -- Mutate our jobId variable to hold the channel ID
-      print(Twitch_JobId)
-      Twitch_JobId = id
-      print(id)
-
       configureCommands()
     end
   end
