@@ -7,72 +7,17 @@
   * Open chat log file as buffer
     * Need to update buffer as file updates come in from background server
 --]]
--- TODO: Figure out if we want to have settings here
--- Perhaps they would only be for the audio/video functionality
--- local settings = {
---   twitch_client_id = nil
---   twitch_client_secret = nil
--- }
 
-local myTable = {}
+myTable = {}
 myTable.settings = {
-  file = ""
+  file = "/home/michaelbuser/Documents/git/nvim-plugins/lua-twitch-chat/socket/target/debug/socket",
+  -- file = nil,
+  thread = nil
 }
 
-local function test()
-  print("top")
-  -- print(myTable.settings.file)
-  -- local file = io.open(myTable.settings.file, "r")
-  -- print(file)
-  -- if file then
-  --   local f = file:read("*a")
-  --   print("f", f)
-  -- end
-  local what = io.popen(myTable.settings.file, "r")
-  print("what", what)
-  if what then
-    local huh = what:read("*a")
-    print("huh", huh)
-  end
 
-  print("test")
+myTable.setup = function()
+  require("./job.lua")
 end
-
-local api = vim.api
-local buf, win
-local function open()
-  buf = api.nvim_create_buf(false, true) -- create new emtpy buffer
-
-  api.nvim_buf_set_option(buf, 'bufhidden', 'wipe')
-
-  -- get dimensions
-  local width = api.nvim_get_option("columns")
-  local height = api.nvim_get_option("lines")
-
-  -- calculate our floating window size
-  local win_height = math.ceil(height * 0.8 - 4)
-  local win_width = math.ceil(width * 0.8)
-
-  -- and its starting position
-  local row = math.ceil((height - win_height) / 2 - 1)
-  local col = math.ceil((width - win_width) / 2)
-
-  -- set some options
-  local opts = {
-    style = "minimal",
-    relative = "editor",
-    width = win_width,
-    height = win_height,
-    row = row,
-    col = col
-  }
-
-  -- and finally create it with buffer attached
-  win = api.nvim_open_win(buf, true, opts)
-end
-
-myTable.test = test
-myTable.open = open
-
 
 return myTable

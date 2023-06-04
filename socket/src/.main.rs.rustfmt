@@ -1,0 +1,149 @@
+// use std::io::Write;
+use neovim_lib::{Neovim, NeovimApi, Session};
+
+mod oauth;
+mod ws;
+
+enum Messages {
+    // Add,
+    // Multiply,
+    Init,
+    Join,
+    Send,
+    OAuth,
+    Unknown(String),
+}
+
+impl From<String> for Messages {
+    fn from(event: String) -> Self {
+        match &event[..] {
+            // "add" => Messages::Add,
+            // "multiply" => Messages::Multiply,
+            _ => Messages::Unknown(event),
+        }
+    }
+}
+
+struct Twitch {
+    nickname: Option<String>,
+    client_id: Option<String>,
+    access_token: Option<String>,
+}
+
+impl Twitch {
+    fn init() -> Twitch {
+        Twitch {
+            nickname: None,
+            client_id: None,
+            access_token: None,
+        }
+    }
+
+    fn oauth() {}
+
+    // This listens to messages in that channel
+    fn join_channel() {}
+
+    fn send_message() {}
+}
+
+struct EventHandler {
+    nvim: Neovim,
+    twitch: Twitch,
+}
+
+impl EventHandler {
+    fn new() -> EventHandler {
+        let session = Session::new_parent().unwrap();
+        let nvim = Neovim::new(session);
+        let twitch = Twitch::init();
+        twitch.join_channel();
+
+        EventHandler { nvim, twitch }
+    }
+
+    fn recv(&mut self) {
+        let receiver = self.nvim.session.start_event_loop_channel();
+
+        for (event, values) in receiver {
+            match Messages::from(event) {
+                // Handle 'Add'
+                // Messages::Add => {
+                //     let nums = values
+                //         .iter()
+                //         .map(|v| v.as_i64().unwrap())
+                //         .collect::<Vec<i64>>();
+                //
+                //     let sum = self.calculator.add(nums);
+                //     self.nvim
+                //         .command(&format!("echo \"Sum: {}\"", sum.to_string()))
+                //         .unwrap();
+                // }
+
+                // Handle 'Multiply'
+                // Messages::Multiply => {
+                //     let mut nums = values.iter();
+                //     let p = nums.next().unwrap().as_i64().unwrap();
+                //     let q = nums.next().unwrap().as_i64().unwrap();
+                //
+                //     let product = self.calculator.multiply(p, q);
+                //     self.nvim
+                //         .command(&format!("echo \"Product: {}\"", product.to_string()))
+                //         .unwrap();
+                // }
+                Messages::Init => {
+                    let mut args = values.iter();
+                    let nickname = args.next().unwrap().to_string();
+                    let client_id = args.next().unwrap().to_string();
+
+                    self.twitch.nickname = Option::from(nickname);
+                    self.twitch.client_id = Option::from(client_id);
+                }
+                Messages::OAuth => {
+                    if self.twitch.client_id.is_none() {
+                        // TODO(Buser): echo error
+                    }
+
+                    // oauth::local_connect();
+                }
+                Messages::Join => {
+                    if self.twitch.nickname.is_none() || self.twitch.access_token.is_none() {
+                        // TODO(Buser): echo error
+                    }
+
+                    self.twitch
+                }
+                Messages::Send => {}
+
+                // Handle anything else
+                Messages::Unknown(event) => {
+                    self.nvim
+                        .command(&format!("echo \"Unknown command: {}\"", event))
+                        .unwrap();
+                }
+            }
+        }
+    }
+}
+
+#[tokio::main]
+async fn main() {
+    // This is how args would work
+    // let all_args: Vec<String> = std::env::args().collect();
+    // let args = &all_args[1..all_args.len()];
+
+    // TODO(Buser): The chat listening flow of the application
+    // Need to look for --client_id and --command=join
+    // If it isn't there then we run through the oauth function
+    // If it is then we can simply run through the chat listener
+
+    // TODO(Buser): The chat messaging flow
+    // Need to look for --client_id --command=message
+    // (May need to validate that we are in a channel first)
+    // If we don't have a client_id then fail?? or perhaps force oauth flow
+    // TODO(Buser): [2^] Handle the possibility of joining a channel with a flag
+    let mut event_handler = EventHandler::new();
+    event_handler.recv();
+
+    // oauth::local_connect();
+}
