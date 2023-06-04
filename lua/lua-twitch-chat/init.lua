@@ -47,7 +47,7 @@ function ConfigureCommands()
     end
 
     vim.rpcnotify(Twitch_JobId, Twitch_Init, args[0], args[1], args[2])
-  end, { nargs = "3" })
+  end, { nargs = "*" })
 
   vim.api.nvim_create_user_command("TwitchOAuth", function()
     vim.rpcnotify(Twitch_JobId, Twitch_Oauth)
