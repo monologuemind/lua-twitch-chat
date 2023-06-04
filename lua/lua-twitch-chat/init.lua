@@ -47,11 +47,11 @@ function ConfigureCommands()
     end
 
     vim.rpcnotify(Twitch_JobId, Twitch_Init, args[0], args[1], args[2])
-  end, { nargs = 3 })
+  end, { nargs = "3" })
 
   vim.api.nvim_create_user_command("TwitchOAuth", function()
     vim.rpcnotify(Twitch_JobId, Twitch_Oauth)
-  end, { nargs = 0 })
+  end, { nargs = "0" })
 
   vim.api.nvim_create_user_command("TwitchJoin", function(opts)
     local args = splitString(opts.args or "", " ")
@@ -60,11 +60,7 @@ function ConfigureCommands()
       vim.notify("No arguments passed", vim.log.levels.ERROR)
       return
     end
-
-    -- for _, value in pairs(args) do
-    --   print(value)
-    -- end
-  end, { nargs = "?" })
+  end, { nargs = "0" })
 end
 
 -- Initialize RPC
