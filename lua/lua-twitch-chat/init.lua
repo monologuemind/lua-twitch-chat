@@ -46,18 +46,12 @@ function ConfigureCommands()
       return
     end
 
-    vim.rpcnotify(Twitch_JobId, Twitch_Init, args)
-  end, { nargs = "?" })
+    vim.rpcnotify(Twitch_JobId, Twitch_Init, args[0], args[1], args[2])
+  end, { nargs = 3 })
 
-  vim.api.nvim_create_user_command("TwitchOAuth", function(opts)
-    local args = splitString(opts.args or "", " ")
-
-    for k, value in pairs(args) do
-      print(k, value)
-    end
-
-    vim.rpcnotify(Twitch_JobId, Twitch_Oauth, args)
-  end, { nargs = "?" })
+  vim.api.nvim_create_user_command("TwitchOAuth", function()
+    vim.rpcnotify(Twitch_JobId, Twitch_Oauth)
+  end, { nargs = 0 })
 
   vim.api.nvim_create_user_command("TwitchJoin", function(opts)
     local args = splitString(opts.args or "", " ")
@@ -93,7 +87,8 @@ function Connect()
   end
 end
 
-MyTable.setup = function()
+MyTable.setup = function(opts)
+  print(opts)
   -- Setting up the exit of the editor to also stop the socket
   local twitch_group = vim.api.nvim_create_augroup("TwitchSocket", { clear = true })
   vim.api.nvim_create_autocmd("ExitPre", {

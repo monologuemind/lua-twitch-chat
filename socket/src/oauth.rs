@@ -137,25 +137,5 @@ pub fn local_connect(client_id: String, oauth_port: String) -> Result<String, St
             break;
         };
     }
-    return Err("".to_string());
-}
-
-pub async fn oauth() {
-    // start redirect server
-    // open browser with client id
-    // on redirect store code/token
-    //  * may involve setting something in lua
-    //  * or perhaps a file that lua reads
-    // close browser tab
-    // stop redirect server
-    // start websocket
-
-    // Now a user could use commands to join channels
-    // Then we would have to handle parsing messages
-    // This may involve multiple instances since we are just reading chat
-    // May as well use more CPU if we have it available
-    // Otherwise we may have 1 connection that listens to messages from multiple channels
-    // This would then have a a more complex message system
-    // channel_day.chatlog or something
-    //  * mutliple streams in one day could denote the start/end of listening
+    return Err("Error broken stream".to_string());
 }

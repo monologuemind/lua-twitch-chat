@@ -1,4 +1,5 @@
-use std::{fs::OpenOptions, io::Write};
+use std::{fs::OpenOptions, io::Write, sync::Arc};
+use tokio::sync::Mutex;
 
 use neovim_lib::{Neovim, NeovimApi, Session, Value};
 
@@ -46,30 +47,6 @@ impl Twitch {
     }
 }
 
-fn log_to_file(msg: String) {
-    let path = "/home/michaelbuser/Documents/git/nvim-plugins/lua-twitch-chat/socket/log.log";
-    let mut file: Option<std::fs::File> = None;
-    println!("{file:?}");
-
-    let log_file_exists = std::path::Path::new(&path).exists();
-
-    if log_file_exists {
-        file = Option::from(
-            OpenOptions::new()
-                .write(true)
-                .append(true)
-                .open(path)
-                .unwrap(),
-        );
-    } else {
-        file = Option::from(std::fs::File::create(path).unwrap());
-    }
-
-    if let Err(e) = file.unwrap().write_all(msg.as_bytes()) {
-        eprintln!("Error writing to logfile:\n{e:?}");
-    }
-}
-
 struct EventHandler {
     nvim: Neovim,
     twitch: Twitch,
@@ -80,7 +57,8 @@ struct EventHandler {
             twitch_irc::login::StaticLoginCredentials,
         >,
     >,
-    end: bool,
+    listening: bool,
+    // end: bool,
 }
 
 impl EventHandler {
@@ -94,15 +72,27 @@ impl EventHandler {
             twitch,
             oauth_port: String::from("6969"),
             client: None,
-            // incoming_messages: None,
-            // join_handles: vec![],
-            end: false,
+            listening: false,
+            // end: false,
         }
     }
 
-    async fn recv(&mut self, join_handles: &mut Vec<tokio::task::JoinHandle<()>>) {
+    async fn recv(
+        &mut self,
+        join_handles: &mut Vec<tokio::task::JoinHandle<()>>,
+        incoming_messages_arc: Arc<
+            Mutex<tokio::sync::mpsc::UnboundedReceiver<twitch_irc::message::ServerMessage>>,
+        >,
+        client_arc: Arc<
+            Mutex<
+                twitch_irc::TwitchIRCClient<
+                    twitch_irc::transport::tcp::TCPTransport<twitch_irc::transport::tcp::TLS>,
+                    twitch_irc::login::StaticLoginCredentials,
+                >,
+            >,
+        >,
+    ) {
         let receiver = self.nvim.session.start_event_loop_channel();
-        let _ = self.nvim.command("echo \"sup\"");
 
         for (event, values) in receiver {
             // TODO(Buser): Figure out how we exit this shit
@@ -110,21 +100,47 @@ impl EventHandler {
             //     break;
             // }
 
-            match Messages::from(event) {
+            match Messages::from(event.clone()) {
                 Messages::Test => {
-                    log_to_file(String::from("testing communication"));
-
                     self.nvim.command("echo \"testing\"").unwrap();
                 }
                 Messages::Init => {
-                    let mut args = values.iter();
-                    let nickname = args.next().unwrap().to_string();
-                    let client_id = args.next().unwrap().to_string();
-                    let oauth_port = args.next().unwrap_or(&Value::from("6969")).to_string();
+                    let mut error = false;
+                    let parsed_values: Vec<&str> = values
+                        .iter()
+                        .map(|v| {
+                            let possible_value = v.as_str();
+
+                            if possible_value.is_none() {
+                                error = true;
+                                return "error::default";
+                            }
+
+                            return possible_value.unwrap();
+                        })
+                        .collect();
+
+                    if error {
+                        self.nvim
+                            .command(&format!("echoerr \"Error parsing values\"",))
+                            .unwrap();
+                    }
+                    let mut args = parsed_values.iter();
+
+                    let nickname = args.next().unwrap_or(&"monologue_mind").to_string();
+                    let client_id = args
+                        .next()
+                        .unwrap_or(&"jzy5ssncfqreqxewn978xmgw03jy5w")
+                        .to_string();
+                    let oauth_port = args.next().unwrap_or(&"6969").to_string();
 
                     self.twitch.nickname = Option::from(nickname);
                     self.twitch.client_id = Option::from(client_id);
                     self.oauth_port = oauth_port;
+
+                    self.nvim
+                        .command(&format!("echo \"Successfully ran TwitchInit, run TwitchOAuth to create a connection\"",))
+                        .unwrap();
                 }
                 Messages::OAuth => {
                     if self.twitch.client_id.is_none() {
@@ -149,6 +165,9 @@ impl EventHandler {
 
                     match result {
                         Ok(access_token) => {
+                            self.nvim
+                                .command(&format!("echo \"access_token: {access_token}\""))
+                                .unwrap();
                             self.twitch.access_token = Option::from(access_token);
 
                             let mut config = twitch_irc::ClientConfig::default();
@@ -158,30 +177,26 @@ impl EventHandler {
                                     token: self.twitch.access_token.clone(),
                                 },
                             };
-                            let (mut incoming_messages, client) =
-                                twitch_irc::TwitchIRCClient::<
-                                    twitch_irc::SecureTCPTransport,
-                                    twitch_irc::login::StaticLoginCredentials,
-                                >::new(config);
 
-                            self.client = Option::from(client);
-                            // self.incoming_messages = Option::from(incoming_messages);
+                            let updated_twitch_client = twitch_irc::TwitchIRCClient::<
+                                twitch_irc::SecureTCPTransport,
+                                twitch_irc::login::StaticLoginCredentials,
+                            >::new(config);
 
-                            // TODO(Buser): Kick off listener????
-                            let join_handle = tokio::spawn(async move {
-                                while let Some(message) = incoming_messages.recv().await {
-                                    println!("Received message: {:?}", message);
-                                }
-                            });
+                            let mut incoming_messages = incoming_messages_arc.lock().await;
+                            *incoming_messages = updated_twitch_client.0;
 
-                            join_handles.push(join_handle);
+                            let mut client = client_arc.lock().await;
+                            *client = updated_twitch_client.1;
 
                             self.nvim
                                 .command(&format!("echo \"Connected to Twitch\""))
                                 .unwrap();
                         }
                         Err(e) => {
-                            self.nvim.command(&format!("echoerr \"{e}\"")).unwrap();
+                            self.nvim
+                                .command(&format!("echoerr \"Error authing: {e}\""))
+                                .unwrap();
                         }
                     }
                 }
@@ -200,6 +215,20 @@ impl EventHandler {
                         self.nvim
                             .command("echoerr \"client has not been created, please run ':Oauth'\"")
                             .unwrap();
+                    }
+
+                    if !self.listening {
+                        // TODO(Buser): Kick off listener????
+                        let incoming_messages = Arc::clone(&incoming_messages_arc);
+                        let join_handle = tokio::spawn(async move {
+                            let mut messages = incoming_messages.lock().await;
+                            while let Some(message) = messages.recv().await {
+                                println!("Received message: {:?}", message.clone());
+                                // self.nvim.command(&format!("echo \"{message:?}\"")).unwrap();
+                            }
+                        });
+
+                        join_handles.push(join_handle);
                     }
 
                     let mut args = values.iter();
@@ -274,11 +303,20 @@ impl EventHandler {
 
 #[tokio::main]
 async fn main() {
-    log_to_file(String::from("starting up"));
+    let default_config = twitch_irc::ClientConfig::default();
+    let default_client = twitch_irc::TwitchIRCClient::<
+        twitch_irc::SecureTCPTransport,
+        twitch_irc::login::StaticLoginCredentials,
+    >::new(default_config);
+
+    let incoming_messages = Arc::new(Mutex::new(default_client.0));
+    let client = Arc::new(Mutex::new(default_client.1));
 
     let mut event_handler = EventHandler::new();
     let mut join_handles: Vec<tokio::task::JoinHandle<()>> = vec![];
-    event_handler.recv(&mut join_handles).await;
+    event_handler
+        .recv(&mut join_handles, incoming_messages, client)
+        .await;
 
     // abort remaining handles
     for handle in join_handles {
