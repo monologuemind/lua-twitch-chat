@@ -1,3 +1,4 @@
+use neovim_lib::{Neovim, NeovimApi};
 use open::that;
 use std::{
     io::{prelude::*, BufReader},
@@ -5,12 +6,16 @@ use std::{
     str::FromStr,
 };
 
-fn handle_connection(mut stream: TcpStream, running: &mut bool) -> Option<String> {
+fn handle_connection(
+    mut stream: TcpStream,
+    running: &mut bool,
+    nvim: &mut Neovim,
+) -> Option<String> {
     let buf_reader = BufReader::new(&mut stream);
 
     let parser = "function parseParms(str) {    var pieces = str.split(\"&\"), data = {}, i, parts;    // process each query pair\nfor (i = 0; i < pieces.length; i++) {        parts = pieces[i].split(\"=\");        if (parts.length < 2) {            parts.push(\"\");        }        data[decodeURIComponent(parts[0])] = decodeURIComponent(parts[1]);    }    return data;}";
     let fetch = "fetch(`/access_token?access_token=${access_token}`).then((d) => { window.d = d; setTimeout(() => window.close(), 2000); }).catch(e => { window.e = e; });";
-    let script = format!("<script>{parser} const access_token = parseParms(window.location.hash.replace(\"#\", \"\"))?.access_token; {fetch} </script><h1>Success! Window will close automatically.</h1>");
+    let script = format!("<script>{parser} const access_token = parseParms(window.location.hash.replace(\"#\", \"\"))?.access_token; console.log('token', access_token); {fetch} </script><h1>Success! Window will close automatically.</h1>");
     let length = script.len();
 
     let http_request: Vec<_> = buf_reader
@@ -28,20 +33,20 @@ fn handle_connection(mut stream: TcpStream, running: &mut bool) -> Option<String
     // TODO(Buser): Handle if the http_request Vec is empty
 
     let url_parts: Vec<&str> = http_request[0].split(' ').collect();
-    println!("{url_parts:?}");
-    println!("{}", url_parts[1] == "/");
+    nvim.command(&format!("echo \"url_parts: {}\"", url_parts[1]))
+        .unwrap();
+
     // TODO(Buser): Handle if the url_parts Vec is empty
     if url_parts[1] == "/" {
         let response = format!("HTTP/1.1 200 OK\r\nContent-Length: {length}\r\n\r\n{script}");
 
         match stream.write_all(response.as_bytes()) {
             Ok(_) => {
-                // *running = false;
                 println!("Server is: {running}");
                 return None;
             }
             Err(e) => {
-                // *running = false;
+                *running = false;
                 // TODO: make this more helpful
                 eprintln!("Error writing data to oauth tab: {}", e);
                 return None;
@@ -102,7 +107,11 @@ fn handle_connection(mut stream: TcpStream, running: &mut bool) -> Option<String
     }
 }
 
-pub fn local_connect(client_id: String, oauth_port: String) -> Result<String, String> {
+pub fn local_connect(
+    client_id: String,
+    oauth_port: String,
+    nvim: &mut Neovim,
+) -> Result<String, String> {
     let mut running = true;
     let possible_listener = TcpListener::bind(format!("127.0.0.1:{}", 6969));
 
@@ -119,13 +128,18 @@ pub fn local_connect(client_id: String, oauth_port: String) -> Result<String, St
     for possible_stream in listener.incoming() {
         match possible_stream {
             Ok(stream) => {
-                let possible_access_token = handle_connection(stream, &mut running);
+                let possible_access_token = handle_connection(stream, &mut running, nvim);
+                nvim.command(&format!("echo \"possible_token\" ")).unwrap();
 
                 match possible_access_token {
                     Some(access_token) => {
+                        nvim.command(&format!("echo \"access_token: {access_token}\" "))
+                            .unwrap();
                         return Ok(access_token);
                     }
-                    None => {}
+                    None => {
+                        nvim.command(&format!("echo \"none\" ")).unwrap();
+                    }
                 }
             }
             Err(e) => {

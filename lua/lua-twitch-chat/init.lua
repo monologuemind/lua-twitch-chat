@@ -83,8 +83,13 @@ function Connect()
   end
 end
 
+--[[--
+@param opts first @table
+@field nickname first string
+@field client_id second string
+@field oauth_port third string
+--]]
 MyTable.setup = function(opts)
-  print(opts)
   -- Setting up the exit of the editor to also stop the socket
   local twitch_group = vim.api.nvim_create_augroup("TwitchSocket", { clear = true })
   vim.api.nvim_create_autocmd("ExitPre", {
@@ -97,6 +102,10 @@ MyTable.setup = function(opts)
   })
 
   Connect()
+
+  if Twitch_JobId and opts.nickname and opts.client_id and opts.oauth_port then
+    vim.rpcnotify(Twitch_JobId, Twitch_Init, opts.nickname, opts.client_id, opts.oauth_port)
+  end
 end
 
 return MyTable

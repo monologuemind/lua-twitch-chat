@@ -161,6 +161,7 @@ impl EventHandler {
                     let result = oauth::local_connect(
                         self.twitch.client_id.clone().unwrap(),
                         self.oauth_port.clone(),
+                        &mut self.nvim,
                     );
 
                     match result {
