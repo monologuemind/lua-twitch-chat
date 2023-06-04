@@ -7,3 +7,5 @@ edition = "2021"
 
 [dependencies]
 neovim-lib = { version = "0.6.1" }
+open = { version = "4.1.0" }
+reqwest = { version = "0.11", features = ["json"] }

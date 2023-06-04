@@ -49,8 +49,14 @@ function ConfigureCommands()
     vim.rpcnotify(Twitch_JobId, Twitch_Init, args)
   end, { nargs = "?" })
 
-  vim.api.nvim_create_user_command("TwitchOAuth", function()
-    vim.rpcnotify(Twitch_JobId, Twitch_Oauth)
+  vim.api.nvim_create_user_command("TwitchOAuth", function(opts)
+    local args = splitString(opts.args or "", " ")
+
+    for k, value in pairs(args) do
+      print(k, value)
+    end
+
+    vim.rpcnotify(Twitch_JobId, Twitch_Oauth, args)
   end, { nargs = "?" })
 
   vim.api.nvim_create_user_command("TwitchJoin", function(opts)
