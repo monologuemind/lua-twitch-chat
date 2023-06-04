@@ -25,7 +25,7 @@ Twitch_Init = 'init'
 Twitch_Test = 'test'
 
 -- The path to the binary that was created out of 'cargo build' or 'cargo build --release'. This will generally be 'target/release/name'
-Target_Application = '/home/michaelbuser/Documents/git/nvim-plugins/lua-twitch-chat/sample/target/debug/sample'
+Target_Application = '/home/michaelbuser/Documents/git/nvim-plugins/lua-twitch-chat/socket/target/debug/socket'
 
 -- Initialize RPC
 function InitTwitchRpc()
@@ -45,10 +45,7 @@ MyTable.settings = {
 MyTable.setup = function()
   local function configureCommands()
     vim.api.nvim_create_user_command("TwitchTest", function()
-      print("testing")
-
       vim.rpcnotify(Twitch_JobId, Twitch_Test)
-      print("end")
     end, {})
     vim.api.nvim_create_user_command("TwitchInit", function(opts)
       local args = splitString(opts.args or "", " ")
@@ -73,9 +70,9 @@ MyTable.setup = function()
         return
       end
 
-      for _, value in pairs(args) do
-        print(value)
-      end
+      -- for _, value in pairs(args) do
+      --   print(value)
+      -- end
     end, { nargs = "?" })
   end
 
