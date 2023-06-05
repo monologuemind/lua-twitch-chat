@@ -23,6 +23,7 @@ end
 Twitch_Oauth = 'oauth'
 Twitch_Init = 'init'
 Twitch_Test = 'test'
+Twitch_Unknown = 'unknown'
 
 -- The path to the binary that was created out of 'cargo build' or 'cargo build --release'. This will generally be 'target/release/name'
 Target_Application = '/home/michaelbuser/Documents/git/nvim-plugins/lua-twitch-chat/socket/target/debug/socket'
@@ -37,6 +38,9 @@ MyTable = {}
 function ConfigureCommands()
   vim.api.nvim_create_user_command("TwitchTest", function()
     vim.rpcnotify(Twitch_JobId, Twitch_Test)
+  end, {})
+  vim.api.nvim_create_user_command("TwitchUnknown", function()
+    vim.rpcnotify(Twitch_JobId, Twitch_Unknown)
   end, {})
   vim.api.nvim_create_user_command("TwitchInit", function(opts)
     local args = splitString(opts.args or "", " ")

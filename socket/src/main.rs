@@ -1,10 +1,10 @@
-use std::{fs::OpenOptions, io::Write, sync::Arc};
+use std::{collections::HashMap, sync::Arc};
 use tokio::sync::Mutex;
 
+use neovim_lib::neovim_api::Buffer;
 use neovim_lib::{Neovim, NeovimApi, Session, Value};
 
 mod oauth;
-mod ws;
 
 enum Messages {
     Test,
@@ -224,7 +224,7 @@ impl EventHandler {
                         let join_handle = tokio::spawn(async move {
                             let mut messages = incoming_messages.lock().await;
                             while let Some(message) = messages.recv().await {
-                                println!("Received message: {:?}", message.clone());
+                                // println!("Received message: {:?}", message.clone());
                                 // self.nvim.command(&format!("echo \"{message:?}\"")).unwrap();
                             }
                         });
@@ -290,6 +290,10 @@ impl EventHandler {
 
                 // Handle anything else
                 Messages::Unknown(event) => {
+                    let what = Buffer::new(Value::from(""));
+                    let _ = what.set_name(&mut self.nvim, "sup");
+                    let _ = what.attach(&mut self.nvim, true, vec![]);
+
                     self.nvim
                         .command(&format!(
                             "echoerr \"Unknown command: {}. We support Init, Join, Send, OAuth\"",
@@ -304,6 +308,8 @@ impl EventHandler {
 
 #[tokio::main]
 async fn main() {
+    let mut event_handler = EventHandler::new();
+
     let default_config = twitch_irc::ClientConfig::default();
     let default_client = twitch_irc::TwitchIRCClient::<
         twitch_irc::SecureTCPTransport,
@@ -312,8 +318,8 @@ async fn main() {
 
     let incoming_messages = Arc::new(Mutex::new(default_client.0));
     let client = Arc::new(Mutex::new(default_client.1));
+    let buffers = Arc::new(Mutex::new(HashMap::<String, String>::new()));
 
-    let mut event_handler = EventHandler::new();
     let mut join_handles: Vec<tokio::task::JoinHandle<()>> = vec![];
     event_handler
         .recv(&mut join_handles, incoming_messages, client)

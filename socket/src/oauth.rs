@@ -14,7 +14,7 @@ fn handle_connection(
     let buf_reader = BufReader::new(&mut stream);
 
     let parser = "function parseParms(str) {    var pieces = str.split(\"&\"), data = {}, i, parts;    // process each query pair\nfor (i = 0; i < pieces.length; i++) {        parts = pieces[i].split(\"=\");        if (parts.length < 2) {            parts.push(\"\");        }        data[decodeURIComponent(parts[0])] = decodeURIComponent(parts[1]);    }    return data;}";
-    let fetch = "fetch(`/access_token?access_token=${access_token}`).then((d) => { window.d = d; setTimeout(() => window.close(), 2000); }).catch(e => { window.e = e; });";
+    let fetch = "fetch(`/access_token?access_token=${access_token}`).then((d) => { window.d = d; setTimeout(() => window.close(), 2000); }).catch(e => { console.error(e); window.e = e; });";
     let script = format!("<script>{parser} const access_token = parseParms(window.location.hash.replace(\"#\", \"\"))?.access_token; console.log('token', access_token); {fetch} </script><h1>Success! Window will close automatically.</h1>");
     let length = script.len();
 
@@ -30,11 +30,11 @@ fn handle_connection(
         })
         .take_while(|line| !line.is_empty())
         .collect();
-    // TODO(Buser): Handle if the http_request Vec is empty
 
+    // TODO(Buser): Handle if the http_request Vec is empty
     let url_parts: Vec<&str> = http_request[0].split(' ').collect();
-    nvim.command(&format!("echo \"url_parts: {}\"", url_parts[1]))
-        .unwrap();
+    // nvim.command(&format!("echo \"url_parts: {}\"", url_parts[1]))
+    //     .unwrap();
 
     // TODO(Buser): Handle if the url_parts Vec is empty
     if url_parts[1] == "/" {
@@ -42,13 +42,13 @@ fn handle_connection(
 
         match stream.write_all(response.as_bytes()) {
             Ok(_) => {
-                println!("Server is: {running}");
+                // nvim.command(&format!("echo \"Response sent\"")).unwrap();
                 return None;
             }
             Err(e) => {
                 *running = false;
-                // TODO: make this more helpful
-                eprintln!("Error writing data to oauth tab: {}", e);
+                nvim.command(&format!("Error writing data to oauth tab: {}", e))
+                    .unwrap();
                 return None;
             }
         }
@@ -58,7 +58,11 @@ fn handle_connection(
         reqwest::Url::parse(format!("http://localhost{}", url_parts[1]).as_str());
 
     if let Err(parsed_url_error) = possible_parsed_url {
-        eprintln!("Error parsing url: {}", parsed_url_error);
+        nvim.command(&format!(
+            "echoerr \"Error parsing url: {}\"",
+            parsed_url_error
+        ))
+        .unwrap();
         return None;
     }
 
@@ -74,7 +78,11 @@ fn handle_connection(
             let string_value = String::from_str(value.as_str());
 
             if let Err(string_error) = string_value {
-                eprintln!("Error converting code value to String: {}", string_error);
+                nvim.command(&format!(
+                    "echo \"Error converting code value to String: {}\"",
+                    string_error
+                ))
+                .unwrap();
                 return None;
             }
             access_token = string_value.unwrap();
@@ -84,15 +92,12 @@ fn handle_connection(
             // return None;
         }
     }
-
     let script = "<h1>Success! Window will close automatically.</h1>";
     let length = script.len();
     let response = format!("HTTP/1.1 200 OK\r\nContent-Length: {length}\r\n\r\n{script}");
 
     match stream.write_all(response.as_bytes()) {
         Ok(_) => {
-            *running = false;
-            println!("Server is: {running}");
             if access_token.len() > 0 {
                 return Option::from(access_token);
             }
@@ -100,8 +105,8 @@ fn handle_connection(
         }
         Err(e) => {
             *running = false;
-            // TODO: make this more helpful
-            eprintln!("Error writing data to oauth tab: {}", e);
+            nvim.command(&format!("Error writing data to oauth tab: {}", e))
+                .unwrap();
             return None;
         }
     }
@@ -116,30 +121,23 @@ pub fn local_connect(
     let possible_listener = TcpListener::bind(format!("127.0.0.1:{}", 6969));
 
     if let Err(listener_error) = possible_listener {
-        // eprintln!("Error getting listener: {}", listener_error);
         return Err(listener_error.to_string());
     }
 
     let listener = possible_listener.unwrap();
 
-    // let client_id = "jzy5ssncfqreqxewn978xmgw03jy5w";
     let _ = that(format!("https://id.twitch.tv/oauth2/authorize?response_type=token&client_id={}&redirect_uri=http://localhost:{}&scope=chat%3Aread+chat%3Aedit", client_id, oauth_port));
 
     for possible_stream in listener.incoming() {
         match possible_stream {
             Ok(stream) => {
                 let possible_access_token = handle_connection(stream, &mut running, nvim);
-                nvim.command(&format!("echo \"possible_token\" ")).unwrap();
 
                 match possible_access_token {
                     Some(access_token) => {
-                        nvim.command(&format!("echo \"access_token: {access_token}\" "))
-                            .unwrap();
                         return Ok(access_token);
                     }
-                    None => {
-                        nvim.command(&format!("echo \"none\" ")).unwrap();
-                    }
+                    None => {}
                 }
             }
             Err(e) => {
