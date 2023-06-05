@@ -65,6 +65,19 @@ function ConfigureCommands()
       return
     end
   end, { nargs = "?" })
+
+  vim.api.nvim_create_user_command("TwitchBuf", function()
+    local buf = vim.api.nvim_create_buf(true, false)
+    vim.api.nvim_buf_set_name(buf, "MyBuffer")
+
+    -- Set the initial data in the buffer
+    local data = "Hello, world!"
+    vim.api.nvim_buf_set_lines(buf, 0, -1, false, { data })
+
+    -- Open the buffer in a new split window
+    vim.cmd("split")
+    vim.api.nvim_win_set_buf(0, buf)
+  end, { nargs = "?" })
 end
 
 -- Initialize RPC

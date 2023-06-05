@@ -58,11 +58,8 @@ fn handle_connection(
         reqwest::Url::parse(format!("http://localhost{}", url_parts[1]).as_str());
 
     if let Err(parsed_url_error) = possible_parsed_url {
-        nvim.command(&format!(
-            "echoerr \"Error parsing url: {}\"",
-            parsed_url_error
-        ))
-        .unwrap();
+        nvim.command(&format!("echo \"Error parsing url: {}\"", parsed_url_error))
+            .unwrap();
         return None;
     }
 

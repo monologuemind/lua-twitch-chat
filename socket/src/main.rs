@@ -6,6 +6,19 @@ use neovim_lib::{Neovim, NeovimApi, Session, Value};
 
 mod oauth;
 
+// This is stolen from the session.rs of neovim_lib. It is not exposed
+macro_rules! call_args {
+    () => (Vec::new());
+    ($($e:expr), +,) => (call_args![$($e),*]);
+    ($($e:expr), +) => {{
+        let mut vec = Vec::new();
+        $(
+            vec.push($e.into_val());
+        )*
+        vec
+    }};
+}
+
 enum Messages {
     Test,
     Init,
@@ -122,7 +135,7 @@ impl EventHandler {
 
                     if error {
                         self.nvim
-                            .command(&format!("echoerr \"Error parsing values\"",))
+                            .command(&format!("echo \"Error parsing values\"",))
                             .unwrap();
                     }
                     let mut args = parsed_values.iter();
@@ -146,14 +159,14 @@ impl EventHandler {
                     if self.twitch.client_id.is_none() {
                         self.nvim
                             .command(
-                                "echoerr \"client_id not set. Run ':Init nickname client_id oauth_port'\"",
+                                "echo \"client_id not set. Run ':Init nickname client_id oauth_port'\"",
                             )
                             .unwrap();
                     }
 
                     if self.twitch.access_token.is_some() {
                         self.nvim
-                            .command("echoerr \"access_token already set and valid\"")
+                            .command("echo \"access_token already set and valid\"")
                             .unwrap();
                     }
 
@@ -196,7 +209,7 @@ impl EventHandler {
                         }
                         Err(e) => {
                             self.nvim
-                                .command(&format!("echoerr \"Error authing: {e}\""))
+                                .command(&format!("echo \"Error authing: {e}\""))
                                 .unwrap();
                         }
                     }
@@ -205,7 +218,7 @@ impl EventHandler {
                     if self.twitch.nickname.is_none() || self.twitch.access_token.is_none() {
                         self.nvim
                             .command(&format!(
-                                "echoerr \"Settigs valid: nickname: {}, access_token: {}\"",
+                                "echo \"Settigs valid: nickname: {}, access_token: {}\"",
                                 self.twitch.nickname.is_some(),
                                 self.twitch.access_token.is_some()
                             ))
@@ -214,7 +227,7 @@ impl EventHandler {
 
                     if self.client.is_none() {
                         self.nvim
-                            .command("echoerr \"client has not been created, please run ':Oauth'\"")
+                            .command("echo \"client has not been created, please run ':Oauth'\"")
                             .unwrap();
                     }
 
@@ -242,7 +255,7 @@ impl EventHandler {
 
                     if let Err(e) = response {
                         self.nvim
-                            .command(&format!("echoerr \"Error joining channel: {e:?}\""))
+                            .command(&format!("echo \"Error joining channel: {e:?}\""))
                             .unwrap();
                     }
                 }
@@ -259,7 +272,7 @@ impl EventHandler {
                     if self.twitch.nickname.is_none() || self.twitch.access_token.is_none() {
                         self.nvim
                             .command(&format!(
-                                "echoerr \"Some settigs invalid: nickname: {}, access_token: {}\"",
+                                "echo \"Some settigs invalid: nickname: {}, access_token: {}\"",
                                 self.twitch.nickname.is_none(),
                                 self.twitch.access_token.is_none()
                             ))
@@ -268,7 +281,7 @@ impl EventHandler {
 
                     if self.client.is_none() {
                         self.nvim
-                            .command("echoerr \"client has not been created, please run ':Oauth'\"")
+                            .command("echo \"client has not been created, please run ':Oauth'\"")
                             .unwrap();
                     }
 
@@ -283,20 +296,60 @@ impl EventHandler {
 
                     if let Err(e) = msg {
                         self.nvim
-                            .command(&format!("echoerr \"Error sending message: {e:?}\""))
+                            .command(&format!("echo \"Error sending message: {e:?}\""))
                             .unwrap();
                     }
                 }
 
                 // Handle anything else
                 Messages::Unknown(event) => {
-                    let what = Buffer::new(Value::from(""));
-                    let _ = what.set_name(&mut self.nvim, "sup");
-                    let _ = what.attach(&mut self.nvim, true, vec![]);
+                    let res = self.nvim.session.call(
+                        "nvim_create_buf",
+                        vec![Value::from(true), Value::from(false)],
+                    );
+
+                    if let Err(e) = res.clone() {
+                        self.nvim
+                            .command(&format!("echo \"Error creating buf: {}\"", e.to_string()))
+                            .unwrap();
+                    }
+
+                    let value = res.unwrap();
+                    self.nvim
+                        .command(&format!("echo \"buf value: {}\"", value.to_string()))
+                        .unwrap();
+
+                    // self.nvim
+                    //     .command(&format!("echo \"Setting up unknown\""))
+                    //     .unwrap();
+                    // let what = Buffer::new(Value::from(""));
+                    // self.nvim
+                    //     .command(&format!("echo \"building buffer\""))
+                    //     .unwrap();
+                    // // let res = what.set_name(&mut self.nvim, "sup");
+                    // // self.nvim
+                    // //     .command(&format!("echo \"setting name\""))
+                    // //     .unwrap();
+                    // // if let Err(e) = res {
+                    // //     self.nvim
+                    // //         .command(&format!("echo \"Error setting name: {}\"", e.to_string()))
+                    // //         .unwrap();
+                    // //     return;
+                    // // }
+                    // self.nvim
+                    //     .command(&format!("echo \"before attaching\""))
+                    //     .unwrap();
+                    // let res = what.attach(&mut self.nvim, true, vec![]);
+                    // self.nvim.command(&format!("echo \"attaching\"")).unwrap();
+                    // if let Err(e) = res {
+                    //     self.nvim
+                    //         .command(&format!("echo \"Error attaching: {}\"", e.to_string()))
+                    //         .unwrap();
+                    // }
 
                     self.nvim
                         .command(&format!(
-                            "echoerr \"Unknown command: {}. We support Init, Join, Send, OAuth\"",
+                            "echo \"Unknown command: {}. We support Init, Join, Send, OAuth\"",
                             event
                         ))
                         .unwrap();
