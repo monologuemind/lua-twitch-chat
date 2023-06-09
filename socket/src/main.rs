@@ -1,7 +1,9 @@
 use chrono::{Datelike, Local, Timelike};
 use neovim_lib::{Neovim, NeovimApi, Session, Value};
 use std::{collections::HashMap, sync::Arc};
+use std::{fs::OpenOptions, io::Write};
 use tokio::sync::{Mutex, RwLock};
+use twitch_irc::message::ServerMessage;
 
 mod buffer;
 mod oauth;
@@ -15,6 +17,34 @@ fn format_date(date: chrono::DateTime<Local>) -> String {
         date.month(),
         date.year()
     )
+}
+
+fn handle_file(chat_log_file_path: String, chat_log_dir_path: String, data: String) {
+    let chat_log_file_exists = std::path::Path::new(&chat_log_file_path).exists();
+
+    if chat_log_file_exists {
+        let mut file = OpenOptions::new()
+            .write(true)
+            .append(true)
+            .open(chat_log_file_path.clone())
+            .unwrap();
+
+        if let Err(e) = file.write_all(data.as_bytes()) {
+            // eprintln!("Error writing to logfile:\n{e:?}");
+        }
+    }
+
+    let chat_log_dir_path_exists = std::path::Path::new(&chat_log_dir_path).is_dir();
+
+    if !chat_log_dir_path_exists {
+        std::fs::create_dir(chat_log_dir_path).unwrap();
+    }
+
+    let mut file = std::fs::File::create(chat_log_file_path).unwrap();
+
+    if let Err(e) = file.write_all(data.as_bytes()) {
+        // eprintln!("Error writing to logfile:\n{e:?}");
+    }
 }
 
 enum Messages {
@@ -126,6 +156,7 @@ impl EventHandler {
                     self.nvim.command("echo \"testing\"").unwrap();
                 }
                 Messages::Init => {
+                    self.nvim.command(&format!("echo \"enter\"",)).unwrap();
                     let mut error = false;
                     let parsed_values: Vec<&str> = values
                         .iter()
@@ -145,14 +176,25 @@ impl EventHandler {
                         self.nvim
                             .command(&format!("echo \"Error parsing values\"",))
                             .unwrap();
+                        return;
                     }
+
+                    if parsed_values.len() != 4 {
+                        self.nvim
+                            .command(&format!("echo \"Requires 4 arguments\"",))
+                            .unwrap();
+                        return;
+                    }
+
                     let mut args = parsed_values.iter();
 
+                    self.nvim.command(&format!("echo \"args\"",)).unwrap();
                     // TODO(Buser): check for errors on unwrap
                     let nickname = args.next().unwrap().to_string();
                     let client_id = args.next().unwrap().to_string();
                     let oauth_port = args.next().unwrap().to_string();
                     let chat_logs_folder_path = args.next().unwrap().to_string();
+
                     let mut handle = chat_logs_folder_path_arc.write().await;
                     *handle = chat_logs_folder_path;
 
@@ -198,7 +240,8 @@ impl EventHandler {
                             let mut config = twitch_irc::ClientConfig::default();
                             config.login_credentials = twitch_irc::login::StaticLoginCredentials {
                                 credentials: twitch_irc::login::CredentialsPair {
-                                    login: "".to_string(),
+                                    // login: "monologuemind".to_string(),
+                                    login: self.twitch.nickname.clone().unwrap(),
                                     token: self.twitch.access_token.clone(),
                                 },
                             };
@@ -226,6 +269,28 @@ impl EventHandler {
                     }
                 }
                 Messages::Join => {
+                    let mut error = false;
+                    let parsed_values: Vec<&str> = values
+                        .iter()
+                        .map(|v| {
+                            let possible_value = v.as_str();
+
+                            if possible_value.is_none() {
+                                error = true;
+                                return "error::default";
+                            }
+
+                            return possible_value.unwrap();
+                        })
+                        .collect();
+
+                    if error {
+                        self.nvim
+                            .command(&format!("echo \"Error parsing values\"",))
+                            .unwrap();
+                        return;
+                    }
+
                     // TODO(Buser): Add leave command
                     // Certainly! To leave a channel using IRC WebSocket messages, you can send the appropriate IRC command. Here's an example of how you can do it:
                     //
@@ -253,14 +318,14 @@ impl EventHandler {
                         return;
                     }
 
-                    if self.client.is_none() {
-                        self.nvim
-                            .command("echo \"client has not been created, please run ':Oauth'\"")
-                            .unwrap();
-                        return;
-                    }
+                    // if self.client.is_none() {
+                    //     self.nvim
+                    //         .command("echo \"client has not been created, please run ':Oauth'\"")
+                    //         .unwrap();
+                    //     return;
+                    // }
 
-                    let mut args = values.iter();
+                    let mut args = parsed_values.iter();
                     let channel = args.next().unwrap().to_string();
 
                     let path = chat_logs_folder_path_arc.read().await;
@@ -278,6 +343,7 @@ impl EventHandler {
                         drop(buffer_guard);
                     }
 
+                    let _ = std::fs::write("/home/michaelbuser/Documents/git/nvim-plugins/lua-twitch-chat/socket/chat.log", "");
                     if !self.listening {
                         let incoming_messages = Arc::clone(&incoming_messages_arc);
                         let buffer_arc_clone = Arc::clone(&buffers);
@@ -287,7 +353,43 @@ impl EventHandler {
                             let buffers = buffer_arc_clone.read().await;
                             while let Some(message) = messages.recv().await {
                                 // message.source();
-                                let _ = std::fs::write("/home/michaelbuser/Documents/git/nvim-plugins/lua-twitch-chat/socket/chat.log", "some data");
+
+                                match message {
+                                    ServerMessage::Privmsg(msg) => {
+                                        let data = format!(
+                                            "MSG: {}@{}: {}\n",
+                                            msg.channel_login, msg.sender.name, msg.message_text
+                                        );
+                                        // handle_file("/home/michaelbuser/Documents/git/nvim-plugins/lua-twitch-chat/socket".to_string(), "/home/michaelbuser/Documents/git/nvim-plugins/lua-twitch-chat/socket/chat.log".to_string(), data.clone());
+                                        // let _ = std::fs::write("/home/michaelbuser/Documents/git/nvim-plugins/lua-twitch-chat/socket/recent.log", data);
+                                        let mut file = OpenOptions::new()
+                                            .write(true)
+                                            .append(true)
+                                            .open("/home/michaelbuser/Documents/git/nvim-plugins/lua-twitch-chat/socket/chat.log")
+                                            .unwrap();
+
+                                        if let Err(e) = file.write_all(data.as_bytes()) {}
+                                    }
+                                    _ => {
+                                        let tags = message.source().clone().tags.0;
+                                        let prefix = message.source().clone().prefix.unwrap();
+                                        let params = message.source().clone().params;
+                                        let command = message.source().clone().command;
+
+                                        let data = format!(
+                                            "BUNK: {tags:?}@{prefix:?}@{params:?}@{command:?}\n"
+                                        );
+                                        // handle_file("/home/michaelbuser/Documents/git/nvim-plugins/lua-twitch-chat/socket".to_string(), "/home/michaelbuser/Documents/git/nvim-plugins/lua-twitch-chat/socket/chat.log".to_string(), data.clone());
+                                        // let _ = std::fs::write("/home/michaelbuser/Documents/git/nvim-plugins/lua-twitch-chat/socket/recent.log", data);
+                                        let mut file = OpenOptions::new()
+                                            .write(true)
+                                            .append(true)
+                                            .open("/home/michaelbuser/Documents/git/nvim-plugins/lua-twitch-chat/socket/chat.log")
+                                            .unwrap();
+
+                                        if let Err(e) = file.write_all(data.as_bytes()) {}
+                                    }
+                                }
 
                                 // TODO(Buser): Parse the message
                                 // * get the associated buffer by channel name
@@ -303,7 +405,10 @@ impl EventHandler {
 
                     // TODO(Buser): Need to figure out if a single socket
                     // handles all joins, if so we only create the listener once
-                    let client = self.client.clone().unwrap();
+                    self.nvim
+                        .command(format!("echo \"channel: {channel}\"").as_str())
+                        .unwrap();
+                    let client = client_arc.write().await;
                     let response = client.join(channel);
 
                     if let Err(e) = response {

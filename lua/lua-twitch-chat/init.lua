@@ -117,12 +117,12 @@ function ConfigureCommands()
   vim.api.nvim_create_user_command("TwitchInit", function(opts)
     local args = splitString(opts.args or "", " ")
 
-    if tablelength(args) ~= 3 then
-      vim.notify("TwitchInit requires only 3 arguments: nickname client_id port", vim.log.levels.ERROR)
+    if tablelength(args) ~= 4 then
+      vim.notify("TwitchInit requires only 4 arguments: nickname client_id port chat_log_path", vim.log.levels.ERROR)
       return
     end
 
-    vim.rpcnotify(Twitch_JobId, Twitch_Init, args[0], args[1], args[2])
+    vim.rpcnotify(Twitch_JobId, Twitch_Init, args[0], args[1], args[2], args[3])
   end, { nargs = "*" })
 
   vim.api.nvim_create_user_command("TwitchOAuth", function()
@@ -137,7 +137,9 @@ function ConfigureCommands()
       return
     end
 
-    vim.rpcnotify(Twitch_JobId, Twitch_Join, args[0])
+    print("args", tablelength(args), args[1])
+
+    vim.rpcnotify(Twitch_JobId, Twitch_Join, args[1])
   end, { nargs = "?" })
 
   vim.api.nvim_create_user_command("TwitchBuf", function()
@@ -179,6 +181,7 @@ end
 @field nickname first string
 @field client_id second string
 @field oauth_port third string
+@field chat_log_path fourth string
 --]]
 MyTable.setup = function(opts)
   -- Setting up the exit of the editor to also stop the socket
@@ -194,8 +197,8 @@ MyTable.setup = function(opts)
 
   Connect()
 
-  if Twitch_JobId and opts.nickname and opts.client_id and opts.oauth_port then
-    vim.rpcnotify(Twitch_JobId, Twitch_Init, opts.nickname, opts.client_id, opts.oauth_port)
+  if Twitch_JobId and opts.nickname and opts.client_id and opts.oauth_port and opts.chat_log_path then
+    vim.rpcnotify(Twitch_JobId, Twitch_Init, opts.nickname, opts.client_id, opts.oauth_port, opts.chat_log_path)
   end
 end
 
