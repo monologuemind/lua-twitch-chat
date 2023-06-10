@@ -12,8 +12,6 @@
 --   end
 -- end
 -- print(getOperatingSystem())
-
-
 -- WATCH FILE --
 -- local w = vim.loop.new_fs_event()
 -- local function on_change(err, fname, status)
@@ -40,7 +38,6 @@
 --
 -- vim.api.nvim_command(
 --   "command! -nargs=1 Watch call luaeval('watch_file(_A)', expand('<args>'))")
-
 -- AUTOSCROLL --
 -- local function auto_scroll()
 --     local bufnr = vim.api.nvim_get_current_buf()
@@ -67,8 +64,6 @@
 -- end
 --
 -- auto_scroll()
-
-
 local function splitString(str, delimiter)
   local result = {}
 
@@ -86,9 +81,7 @@ local function tablelength(T)
 end
 
 -- Initialize the channel
-if not Twitch_JobId then
-  Twitch_JobId = 0
-end
+if not Twitch_JobId then Twitch_JobId = 0 end
 
 -- Constants for RPC messages
 Twitch_Oauth = 'oauth'
@@ -98,7 +91,8 @@ Twitch_Unknown = 'unknown'
 Twitch_Join = 'join'
 
 -- The path to the binary that was created out of 'cargo build' or 'cargo build --release'. This will generally be 'target/release/name'
-Target_Application = '/home/michaelbuser/Documents/git/nvim-plugins/lua-twitch-chat/socket/target/debug/socket'
+Target_Application =
+'/home/michaelbuser/Documents/git/nvim-plugins/lua-twitch-chat/socket/target/debug/socket'
 
 MyTable = {}
 -- MyTable.settings = {
@@ -106,6 +100,27 @@ MyTable = {}
 --   -- file = nil,
 --   thread = nil
 -- }
+
+--[[--
+@param opts @table
+  @field nickname string
+  @field client_id string
+  @field oauth_port string
+  @field chat_log_path string
+--]]
+local function twitch_init(opts)
+  if Twitch_JobId == 0 or opts.nickname or opts.client_id or opts.oauth_port or
+      opts.chat_log_path then
+    vim.notify(string.format(
+      "TwitchInit requires 4 arguments (nickname = %s client_id = %s oauth_port %s chat_log_path = %s)",
+      opts.nickname, opts.client_id, opts.oauth_port,
+      opts.chat_log_path), vim.log.levels.ERROR)
+    return
+  end
+
+  vim.rpcnotify(Twitch_JobId, Twitch_Init, opts.nickname, opts.client_id,
+    opts.oauth_port, opts.chat_log_path)
+end
 
 function ConfigureCommands()
   vim.api.nvim_create_user_command("TwitchTest", function()
@@ -118,11 +133,19 @@ function ConfigureCommands()
     local args = splitString(opts.args or "", " ")
 
     if tablelength(args) ~= 4 then
-      vim.notify("TwitchInit requires only 4 arguments: nickname client_id port chat_log_path", vim.log.levels.ERROR)
+      vim.notify(
+        "TwitchInit requires only 4 arguments: nickname client_id port chat_log_path",
+        vim.log.levels.ERROR)
       return
     end
 
-    vim.rpcnotify(Twitch_JobId, Twitch_Init, args[0], args[1], args[2], args[3])
+    twitch_init({
+      nickname = args[0],
+      client_id = args[1],
+      oauth_port = args[2],
+      chat_log_path = args[3]
+    })
+    -- vim.rpcnotify(Twitch_JobId, Twitch_Init, args[0], args[1], args[2], args[3])
   end, { nargs = "*" })
 
   vim.api.nvim_create_user_command("TwitchOAuth", function()
@@ -177,28 +200,32 @@ function Connect()
 end
 
 --[[--
-@param opts first @table
+@param opts @table
 @field nickname first string
 @field client_id second string
 @field oauth_port third string
 @field chat_log_path fourth string
 --]]
 MyTable.setup = function(opts)
+  print("client_id", opts.client_id)
+  print("chat_log_path", opts.chat_log_path)
+
   -- Setting up the exit of the editor to also stop the socket
-  local twitch_group = vim.api.nvim_create_augroup("TwitchSocket", { clear = true })
+  local twitch_group = vim.api.nvim_create_augroup("TwitchSocket",
+    { clear = true })
   vim.api.nvim_create_autocmd("ExitPre", {
     group = twitch_group,
     callback = function()
-      if Twitch_JobId then
-        vim.fn.jobstop(Twitch_JobId)
-      end
+      if Twitch_JobId then vim.fn.jobstop(Twitch_JobId) end
     end
   })
 
   Connect()
 
-  if Twitch_JobId and opts.nickname and opts.client_id and opts.oauth_port and opts.chat_log_path then
-    vim.rpcnotify(Twitch_JobId, Twitch_Init, opts.nickname, opts.client_id, opts.oauth_port, opts.chat_log_path)
+  if Twitch_JobId and opts.nickname and opts.client_id and opts.oauth_port and
+      opts.chat_log_path then
+    twitch_init(opts)
+    -- vim.rpcnotify(Twitch_JobId, Twitch_Init, opts.nickname, opts.client_id, opts.oauth_port, opts.chat_log_path)
   end
 end
 
