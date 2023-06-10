@@ -207,9 +207,6 @@ end
 @field chat_log_path fourth string
 --]]
 MyTable.setup = function(opts)
-  print("client_id", opts.client_id)
-  print("chat_log_path", opts.chat_log_path)
-
   -- Setting up the exit of the editor to also stop the socket
   local twitch_group = vim.api.nvim_create_augroup("TwitchSocket",
     { clear = true })
