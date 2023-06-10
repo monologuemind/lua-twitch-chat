@@ -109,8 +109,8 @@ MyTable = {}
   @field chat_log_path string
 --]]
 local function twitch_init(opts)
-  if Twitch_JobId == 0 or opts.nickname or opts.client_id or opts.oauth_port or
-      opts.chat_log_path then
+  if Twitch_JobId == 0 or not opts.nickname or not opts.client_id or
+      not opts.oauth_port or not opts.chat_log_path then
     vim.notify(string.format(
       "TwitchInit requires 4 arguments (nickname = %s client_id = %s oauth_port %s chat_log_path = %s)",
       opts.nickname, opts.client_id, opts.oauth_port,
