@@ -13,31 +13,28 @@
 -- end
 -- print(getOperatingSystem())
 -- WATCH FILE --
--- local w = vim.loop.new_fs_event()
--- local function on_change(err, fname, status)
---   -- Do work...
---   vim.api.nvim_command('checktime')
---   CONDITIONS --
---   * check if the cursor is at bottom (nvim + ./some/file.txt)
---   * essentially if an update comes in then we ensure the cursor is at the bottom
---     unless the cursor was moved manually somewhere that isn't the bottom
---   * { buf: bufId, is_active: bool, cursor_at_bottom: bool }
---   * if not active buffer than we simply check if the cursor was last at the bottom
---   CONDITIONS --
---   -- Debounce: stop/start.
---   w:stop()
---   watch_file(fname)
--- end
--- function watch_file(fname)
---   local fullpath = vim.api.nvim_call_function(
---     'fnamemodify', { fname, ':p' })
---   w:start(fullpath, {}, vim.schedule_wrap(function(...)
---     on_change(...)
---   end))
--- end
---
--- vim.api.nvim_command(
---   "command! -nargs=1 Watch call luaeval('watch_file(_A)', expand('<args>'))")
+local w = vim.loop.new_fs_event()
+local function on_change(err, fname, status)
+  -- Do work...
+  vim.api.nvim_command('checktime')
+  -- CONDITIONS --
+  -- * check if the cursor is at bottom (nvim + ./some/file.txt)
+  -- * essentially if an update comes in then we ensure the cursor is at the bottom
+  --   unless the cursor was moved manually somewhere that isn't the bottom
+  -- * { buf: bufId, is_active: bool, cursor_at_bottom: bool }
+  -- * if not active buffer than we simply check if the cursor was last at the bottom
+  -- CONDITIONS --
+  -- Debounce: stop/start.
+  w:stop()
+  watch_file(fname)
+end
+function watch_file(fname)
+  local fullpath = vim.api.nvim_call_function('fnamemodify', { fname, ':p' })
+  w:start(fullpath, {}, vim.schedule_wrap(function(...) on_change(...) end))
+end
+
+vim.api.nvim_command(
+  "command! -nargs=1 WatchFile call luaeval('watch_file(_A)', expand('<args>'))")
 -- AUTOSCROLL --
 -- local function auto_scroll()
 --     local bufnr = vim.api.nvim_get_current_buf()
@@ -145,7 +142,6 @@ function ConfigureCommands()
       oauth_port = args[2],
       chat_log_path = args[3]
     })
-    -- vim.rpcnotify(Twitch_JobId, Twitch_Init, args[0], args[1], args[2], args[3])
   end, { nargs = "*" })
 
   vim.api.nvim_create_user_command("TwitchOAuth", function()
@@ -220,7 +216,6 @@ MyTable.setup = function(opts)
   if Twitch_JobId and opts.nickname and opts.client_id and opts.oauth_port and
       opts.chat_log_path then
     twitch_init(opts)
-    -- vim.rpcnotify(Twitch_JobId, Twitch_Init, opts.nickname, opts.client_id, opts.oauth_port, opts.chat_log_path)
   end
 end
 

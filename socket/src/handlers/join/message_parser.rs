@@ -11,6 +11,32 @@ pub struct ChannelData {
     pub file_name: String,
 }
 
+pub fn debug_write(data: String, debug: bool) {
+    if !debug {
+        return;
+    }
+    let file_path = "/home/michaelbuser/Documents/chat_logs/debug.chat".to_string();
+    let debug_file_exists = std::path::Path::new(&file_path).exists();
+
+    if debug_file_exists {
+        let mut file = OpenOptions::new()
+            .write(true)
+            .append(true)
+            .open(file_path.clone())
+            .unwrap();
+
+        if let Err(e) = file.write_all(data.as_bytes()) {
+            // TODO(Buser): Do something about this one
+        }
+    }
+
+    let mut file = std::fs::File::create(file_path.clone()).unwrap();
+
+    if let Err(e) = file.write_all(data.as_bytes()) {
+        // TODO(Buser): Do something about this one
+    }
+}
+
 // TODO(Buser): Parse the message
 // * get the associated buffer by channel name
 // * check file length of ChannelData file_name
@@ -22,17 +48,20 @@ pub fn parse_message(
     buffers: &RwLockReadGuard<HashMap<String, ChannelData>>,
     path: &RwLockReadGuard<String>,
 ) {
+    let debug = false;
     match message {
         ServerMessage::Privmsg(msg) => {
             let data = format!(
                 "in {} -> {}: {}\n",
                 msg.channel_login, msg.sender.name, msg.message_text
             );
+            debug_write(data.clone(), debug);
 
             let channel_data = buffers.get(&msg.channel_login);
 
             if channel_data.is_none() {
                 // TODO(Buser): Do something about this one
+                debug_write("channel_data is none".to_string(), debug);
             }
 
             let chat_log_file_path = channel_data.unwrap().file_name.clone();
@@ -48,6 +77,7 @@ pub fn parse_message(
 
                 if let Err(e) = file.write_all(data.as_bytes()) {
                     // TODO(Buser): Do something about this one
+                    debug_write("error appending".to_string(), debug);
                 }
                 return;
             }
@@ -63,6 +93,7 @@ pub fn parse_message(
 
             if let Err(e) = file.write_all(data.as_bytes()) {
                 // TODO(Buser): Do something about this one
+                debug_write("error initial writing".to_string(), debug);
             }
         }
 

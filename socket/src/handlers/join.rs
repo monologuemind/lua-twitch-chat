@@ -100,14 +100,14 @@ pub async fn join(
 
     let path = chat_logs_folder_path_arc.read().await;
     let date = format_date(Local::now());
-    let file_name = format!("{}/{channel}-{date}.chat", path.to_string());
+    let file_name = format!("{}/{channel}-{date}.chat", path.clone().to_string());
     {
         let mut buffer_guard = buffers.write().await;
         buffer_guard.insert(
             channel.clone(),
             message_parser::ChannelData {
                 buffer_id: None,
-                file_name,
+                file_name: file_name.clone(),
             },
         );
         drop(buffer_guard);
@@ -134,13 +134,21 @@ pub async fn join(
     // TODO(Buser): Need to figure out if a single socket
     // handles all joins, if so we only create the listener once
     let client = client_arc.write().await;
-    let response = client.join(channel);
+    let response = client.join(channel.clone());
+    // nvim.command(
+    //     format!("echo \"channel joined: {channel}, path: {path}, file_name: {file_name}\"")
+    //         .as_str(),
+    // )
+    // .unwrap();
 
     if let Err(e) = response {
         nvim.command(&format!("echo \"Error joining channel: {e:?}\""))
             .unwrap();
         return None;
     }
+
+    nvim.command(format!("e +$ \"{file_name}\" | WatchFile").as_str())
+        .unwrap();
 
     return Option::from(true);
 }
