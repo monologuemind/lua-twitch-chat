@@ -18,7 +18,7 @@
 --   -- Do work...
 --   vim.api.nvim_command('checktime')
 --   CONDITIONS --
---   * check if the cursor is at bottom
+--   * check if the cursor is at bottom (nvim + ./some/file.txt)
 --   * essentially if an update comes in then we ensure the cursor is at the bottom
 --     unless the cursor was moved manually somewhere that isn't the bottom
 --   * { buf: bufId, is_active: bool, cursor_at_bottom: bool }
@@ -159,8 +159,6 @@ function ConfigureCommands()
       vim.notify("No arguments passed", vim.log.levels.ERROR)
       return
     end
-
-    print("args", tablelength(args), args[1])
 
     vim.rpcnotify(Twitch_JobId, Twitch_Join, args[1])
   end, { nargs = "?" })
