@@ -122,9 +122,10 @@ local function twitch_init(opts)
 end
 
 function ConfigureCommands()
-  vim.api.nvim_create_user_command("TwitchView", function()
-    vim.rpcnotify(Twitch_JobId, Twitch_View)
-  end, {})
+  vim.api.nvim_create_user_command("TwitchView", function(opts)
+    local args = splitString(opts.args or "", " ")
+    vim.rpcnotify(Twitch_JobId, Twitch_View, args[1])
+  end, { nargs = "?" })
 
   vim.api.nvim_create_user_command("TwitchExit", function()
     vim.rpcrequest(Twitch_JobId, Twitch_Exit)

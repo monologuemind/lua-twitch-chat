@@ -206,7 +206,7 @@ impl EventHandler {
                     }
 
                     let file_name = channel_data.unwrap().file_name.clone();
-                    self.nvim.command(&format!("e {file_name}")).unwrap();
+                    self.nvim.command(&format!("echo \"{file_name}\"")).unwrap();
                 }
 
                 Messages::Exit => {
