@@ -9,9 +9,10 @@ enum Messages {
     Test,
     Init,
     Join,
+    View,
     Send,
     OAuth,
-    // Exit,
+    Exit,
     Unknown(String),
 }
 
@@ -21,8 +22,9 @@ impl From<String> for Messages {
             "test" => Messages::Test,
             "init" => Messages::Init,
             "join" => Messages::Join,
-            // "exit" => Messages::Exit,
+            "exit" => Messages::Exit,
             "send" => Messages::Send,
+            "view" => Messages::View,
             "oauth" => Messages::OAuth,
             _ => Messages::Unknown(event),
         }
@@ -56,7 +58,7 @@ struct EventHandler {
         >,
     >,
     listening: bool,
-    // end: bool,
+    end: bool,
 }
 
 impl EventHandler {
@@ -71,7 +73,7 @@ impl EventHandler {
             oauth_port: String::from("6969"),
             client: None,
             listening: false,
-            // end: false,
+            end: false,
         }
     }
 
@@ -96,9 +98,9 @@ impl EventHandler {
 
         for (event, values) in receiver {
             // TODO(Buser): Figure out how we exit this shit
-            // if self.end {
-            //     break;
-            // }
+            if self.end {
+                break;
+            }
 
             match Messages::from(event.clone()) {
                 Messages::Test => {
@@ -164,15 +166,57 @@ impl EventHandler {
                         self.listening = true;
                     }
                 }
-                // Messages::Exit => {
-                //     // let mut args = values.iter();
-                //     // let channel = args.next().unwrap().to_string();
-                //
-                //     // End listener
-                //     for handle in self.join_handles {
-                //         handle.abort();
-                //     }
-                // }
+
+                Messages::View => {
+                    let mut error = false;
+                    let parsed_values: Vec<&str> = values
+                        .iter()
+                        .map(|v| {
+                            let possible_value = v.as_str();
+
+                            if possible_value.is_none() {
+                                error = true;
+                                return "error::default";
+                            }
+
+                            return possible_value.unwrap();
+                        })
+                        .collect();
+
+                    if error {
+                        self.nvim
+                            .command(&format!("echo \"Error parsing values\"",))
+                            .unwrap();
+                        return;
+                    }
+
+                    let mut args = parsed_values.iter();
+                    let channel = args.next().unwrap().to_string();
+
+                    let buf = buffers.read().await;
+                    let channel_data = buf.get(&channel);
+
+                    if channel_data.is_none() {
+                        self.nvim
+                            .command(&format!(
+                                "echo \"Error finding channel, try :TwitchJoin channel_name\"",
+                            ))
+                            .unwrap();
+                        return;
+                    }
+
+                    let file_name = channel_data.unwrap().file_name.clone();
+                    self.nvim.command(&format!("e {file_name}")).unwrap();
+                }
+
+                Messages::Exit => {
+                    for handle in join_handles.iter() {
+                        handle.abort();
+                    }
+
+                    self.end = true;
+                }
+
                 Messages::Send => {
                     handlers::send::say(
                         &self.twitch.nickname,

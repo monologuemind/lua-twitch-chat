@@ -146,9 +146,9 @@ pub async fn join(
             .unwrap();
         return None;
     }
-
-    nvim.command(format!("e +$ \"{file_name}\" | WatchFile").as_str())
-        .unwrap();
+    // | WatchFile
+    // let _ = std::fs::File::create(file_name.clone()).unwrap();
+    // nvim.command(format!("e \"{file_name}\"").as_str()).unwrap();
 
     return Option::from(true);
 }

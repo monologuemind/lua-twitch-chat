@@ -84,6 +84,8 @@ if not Twitch_JobId then Twitch_JobId = 0 end
 Twitch_Oauth = 'oauth'
 Twitch_Init = 'init'
 Twitch_Test = 'test'
+Twitch_Exit = 'exit'
+Twitch_View = 'view'
 Twitch_Unknown = 'unknown'
 Twitch_Join = 'join'
 
@@ -120,12 +122,23 @@ local function twitch_init(opts)
 end
 
 function ConfigureCommands()
+  vim.api.nvim_create_user_command("Twitch_View", function()
+    vim.rpcnotify(Twitch_JobId, Twitch_View)
+  end, {})
+
+  vim.api.nvim_create_user_command("TwitchExit", function()
+    vim.rpcrequest(Twitch_JobId, Twitch_Exit)
+    vim.fn.jobstop(Target_Application)
+  end, {})
+
   vim.api.nvim_create_user_command("TwitchTest", function()
     vim.rpcnotify(Twitch_JobId, Twitch_Test)
   end, {})
+
   vim.api.nvim_create_user_command("TwitchUnknown", function()
-    vim.rpcnotify(Twitch_JobId, Twitch_Unknown)
+    -- vim.rpcnotify(Twitch_JobId, Twitch_Unknown)
   end, {})
+
   vim.api.nvim_create_user_command("TwitchInit", function(opts)
     local args = splitString(opts.args or "", " ")
 
