@@ -122,7 +122,7 @@ local function twitch_init(opts)
 end
 
 function ConfigureCommands()
-  vim.api.nvim_create_user_command("Twitch_View", function()
+  vim.api.nvim_create_user_command("TwitchView", function()
     vim.rpcnotify(Twitch_JobId, Twitch_View)
   end, {})
 
