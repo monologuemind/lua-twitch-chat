@@ -137,7 +137,6 @@ pub async fn join(
     // handles all joins, if so we only create the listener once
     let client = client_arc.write().await;
     let response = client.join(channel.clone());
-    let _ = nvim.command(&format!("lua vim.cmd.edit(\"{file_name}\")"));
     // nvim.command(
     //     format!("echo \"channel joined: {channel}, path: {path}, file_name: {file_name}\"")
     //         .as_str(),
@@ -149,6 +148,9 @@ pub async fn join(
             .unwrap();
         return None;
     }
+
+    let _ = nvim.command(&format!("lua vim.cmd.edit(\"{file_name}\")"));
+    let _ = nvim.command(&format!("WatchFile %"));
     // | WatchFile
     // let _ = std::fs::File::create(file_name.clone()).unwrap();
     // nvim.command(format!("e \"{file_name}\"").as_str()).unwrap();

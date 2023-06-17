@@ -50,6 +50,7 @@ pub fn handle_file(file_path: String, data: String) {
         if let Err(e) = file.write_all(data.as_bytes()) {
             // TODO(Buser): Do something about this one
         }
+        return;
     }
 
     let mut file = std::fs::File::create(file_path.clone()).unwrap();

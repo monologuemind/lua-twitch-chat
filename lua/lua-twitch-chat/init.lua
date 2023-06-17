@@ -13,7 +13,7 @@
 -- end
 -- print(getOperatingSystem())
 -- WATCH FILE --
-local w = vim.loop.new_fs_event()
+local w
 local function on_change(err, fname, status)
   -- Do work...
   vim.api.nvim_command('checktime')
@@ -30,6 +30,8 @@ local function on_change(err, fname, status)
 end
 function watch_file(fname)
   local fullpath = vim.api.nvim_call_function('fnamemodify', { fname, ':p' })
+  w = vim.loop.new_fs_event()
+  if w == nil then return end
   w:start(fullpath, {}, vim.schedule_wrap(function(...) on_change(...) end))
 end
 

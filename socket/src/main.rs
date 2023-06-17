@@ -206,7 +206,10 @@ impl EventHandler {
                     }
 
                     let file_name = channel_data.unwrap().file_name.clone();
-                    self.nvim.command(&format!("echo \"{file_name}\"")).unwrap();
+                    let _ = self
+                        .nvim
+                        .command(&format!("lua vim.cmd.edit(\"{file_name}\")"));
+                    let _ = self.nvim.command(&format!("WatchFile %"));
                 }
 
                 Messages::Exit => {
