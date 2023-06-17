@@ -101,6 +101,8 @@ pub async fn join(
     let path = chat_logs_folder_path_arc.read().await;
     let date = format_date(Local::now());
     let file_name = format!("{}/{channel}-{date}.chat", path.clone().to_string());
+    message_parser::handle_file(file_name.clone().to_string(), "".to_string());
+
     {
         let mut buffer_guard = buffers.write().await;
         buffer_guard.insert(
@@ -135,6 +137,7 @@ pub async fn join(
     // handles all joins, if so we only create the listener once
     let client = client_arc.write().await;
     let response = client.join(channel.clone());
+    let _ = nvim.command(&format!("lua vim.cmd.edit(\"{file_name}\")"));
     // nvim.command(
     //     format!("echo \"channel joined: {channel}, path: {path}, file_name: {file_name}\"")
     //         .as_str(),

@@ -37,6 +37,28 @@ pub fn debug_write(data: String, debug: bool) {
     }
 }
 
+pub fn handle_file(file_path: String, data: String) {
+    let file_exists = std::path::Path::new(&file_path).exists();
+
+    if file_exists {
+        let mut file = OpenOptions::new()
+            .write(true)
+            .append(true)
+            .open(file_path.clone())
+            .unwrap();
+
+        if let Err(e) = file.write_all(data.as_bytes()) {
+            // TODO(Buser): Do something about this one
+        }
+    }
+
+    let mut file = std::fs::File::create(file_path.clone()).unwrap();
+
+    if let Err(e) = file.write_all(data.as_bytes()) {
+        // TODO(Buser): Do something about this one
+    }
+}
+
 // TODO(Buser): Parse the message
 // * get the associated buffer by channel name
 // * check file length of ChannelData file_name
@@ -64,24 +86,7 @@ pub fn parse_message(
                 debug_write("channel_data is none".to_string(), debug);
             }
 
-            let chat_log_file_path = channel_data.unwrap().file_name.clone();
             let chat_log_dir_path = path.clone();
-            let chat_log_file_exists = std::path::Path::new(&chat_log_file_path).exists();
-
-            if chat_log_file_exists {
-                let mut file = OpenOptions::new()
-                    .write(true)
-                    .append(true)
-                    .open(chat_log_file_path.clone())
-                    .unwrap();
-
-                if let Err(e) = file.write_all(data.as_bytes()) {
-                    // TODO(Buser): Do something about this one
-                    debug_write("error appending".to_string(), debug);
-                }
-                return;
-            }
-
             let chat_log_dir_path_exists =
                 std::path::Path::new(&format!("{}/", chat_log_dir_path)).is_dir();
 
@@ -89,12 +94,30 @@ pub fn parse_message(
                 std::fs::create_dir(chat_log_dir_path.to_string()).unwrap();
             }
 
-            let mut file = std::fs::File::create(chat_log_file_path).unwrap();
+            let chat_log_file_path = channel_data.unwrap().file_name.clone();
+            // let chat_log_file_exists = std::path::Path::new(&chat_log_file_path).exists();
+            //
+            // if chat_log_file_exists {
+            //     let mut file = OpenOptions::new()
+            //         .write(true)
+            //         .append(true)
+            //         .open(chat_log_file_path.clone())
+            //         .unwrap();
+            //
+            //     if let Err(e) = file.write_all(data.as_bytes()) {
+            //         // TODO(Buser): Do something about this one
+            //         debug_write("error appending".to_string(), debug);
+            //     }
+            //     return;
+            // }
+            handle_file(chat_log_file_path, data);
 
-            if let Err(e) = file.write_all(data.as_bytes()) {
-                // TODO(Buser): Do something about this one
-                debug_write("error initial writing".to_string(), debug);
-            }
+            // let mut file = std::fs::File::create(chat_log_file_path).unwrap();
+            //
+            // if let Err(e) = file.write_all(data.as_bytes()) {
+            //     // TODO(Buser): Do something about this one
+            //     debug_write("error initial writing".to_string(), debug);
+            // }
         }
 
         _ => {
