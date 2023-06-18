@@ -15,16 +15,11 @@
 -- WATCH FILE --
 local w
 local function on_change(fname)
-  -- Do work...
+  local bufnr = vim.fn.bufnr(fname)
+  local current_bufnr = vim.api.nvim_get_current_buf()
+
   vim.api.nvim_command('checktime')
-  -- CONDITIONS --
-  -- * check if the cursor is at bottom (nvim + ./some/file.txt)
-  -- * essentially if an update comes in then we ensure the cursor is at the bottom
-  --   unless the cursor was moved manually somewhere that isn't the bottom
-  -- * { buf: bufId, is_active: bool, cursor_at_bottom: bool }
-  -- * if not active buffer than we simply check if the cursor was last at the bottom
-  -- CONDITIONS --
-  -- Debounce: stop/start.
+  if bufnr == current_bufnr then vim.fn.cursor({ vim.fn.line('$'), 0 }) end
   w:stop()
   watch_file(fname)
 end
@@ -37,32 +32,7 @@ end
 
 vim.api.nvim_command(
   "command! -nargs=1 WatchFile call luaeval('watch_file(_A)', expand('<args>'))")
--- AUTOSCROLL --
--- local function auto_scroll()
---     local bufnr = vim.api.nvim_get_current_buf()
---     local winnr = vim.api.nvim_get_current_win()
---
---     local prev_line_count = vim.api.nvim_buf_line_count(bufnr)
---
---     vim.api.nvim_buf_attach(bufnr, false, {
---         on_lines = function()
---             local current_line_count = vim.api.nvim_buf_line_count(bufnr)
---
---             if current_line_count > prev_line_count then
---                 local win_height = vim.api.nvim_win_get_height(winnr)
---                 local cursor_pos = vim.api.nvim_win_get_cursor(winnr)
---
---                 if cursor_pos[1] == win_height then
---                     vim.api.nvim_win_set_option(winnr, 'scroll', win_height - 1)
---                 end
---             end
---
---             prev_line_count = current_line_count
---         end
---     })
--- end
---
--- auto_scroll()
+
 local function splitString(str, delimiter)
   local result = {}
 
