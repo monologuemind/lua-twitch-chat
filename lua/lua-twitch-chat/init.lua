@@ -1,38 +1,22 @@
--- function getOperatingSystem()
---   local osName = string.lower((ffi and ffi.os) or (os and os.getenv("OS")) or (io and io.popen("uname -s"):read("*l")))
---
---   if osName:match("linux") then
---     return "Linux"
---   elseif osName:match("darwin") then
---     return "Mac"
---   elseif osName:match("windows") then
---     return "Windows"
---   else
---     return "Unknown"
---   end
--- end
+function GetOperatingSystem()
+  local osName = string.lower((ffi and ffi.os) or (os and os.getenv("OS")) or
+    (io and io.popen("uname -s"):read("*l")))
+
+  if osName:match("linux") then
+    return "Linux"
+  elseif osName:match("darwin") then
+    return "Mac"
+  elseif osName:match("windows") then
+    return "Windows"
+  else
+    return "Unknown"
+  end
+end
+
 -- print(getOperatingSystem())
--- WATCH FILE --
-local w
-local function on_change(fname)
-  local bufnr = vim.fn.bufnr(fname)
-  local current_bufnr = vim.api.nvim_get_current_buf()
 
-  vim.api.nvim_command('checktime')
-  if bufnr == current_bufnr then vim.fn.cursor({ vim.fn.line('$'), 0 }) end
-  w:stop()
-  watch_file(fname)
-end
-function watch_file(fname)
-  local fullpath = vim.api.nvim_call_function('fnamemodify', { fname, ':p' })
-  w = vim.loop.new_fs_event()
-  if w == nil then return end
-  w:start(fullpath, {}, vim.schedule_wrap(function() on_change(fname) end))
-end
-
-vim.api.nvim_command(
-  "command! -nargs=1 WatchFile call luaeval('watch_file(_A)', expand('<args>'))")
-
+---@param str string
+---@param delimiter string
 local function splitString(str, delimiter)
   local result = {}
 
@@ -42,6 +26,98 @@ local function splitString(str, delimiter)
 
   return result
 end
+
+local function stringToBinary(str)
+  local binaryStr = ""
+
+  -- Iterate over each character in the string
+  for i = 1, #str do
+    local char = str:sub(i, i)     -- Get the current character
+
+    -- Convert the character to its ASCII value
+    local asciiValue = string.byte(char)
+
+    -- Convert the ASCII value to binary representation
+    local binaryValue = string.format("%08d", tonumber(asciiValue, 10))
+
+    -- Append the binary representation to the result
+    binaryStr = binaryStr .. binaryValue
+  end
+
+  return binaryStr
+end
+-- star0chris
+--- @param data string
+local load_highlights = function(data)
+  ---@type { [string]: nil | string[] }
+  local hex_groups = {}
+  local user_colors = splitString(data, "\n")
+  for i, v in pairs(user_colors) do
+    local key_value_pair = splitString(v, ",")
+    local group_exists = hex_groups[key_value_pair[2]]
+    if group_exists == nil then hex_groups[key_value_pair[2]] = {} end
+    table.insert(hex_groups[key_value_pair[2]], key_value_pair[1])
+  end
+  for hex_code, user_names in pairs(hex_groups) do
+    local binary_code = stringToBinary(hex_code)
+    vim.api.nvim_set_hl(0, binary_code, { fg = hex_code })
+    for j, user_name in pairs(user_names) do
+      local cm1 = "syntax keyword " .. user_name .. " " .. user_name
+      vim.cmd(cm1)
+      local cm2 = "highlight link " .. user_name .. " " .. binary_code
+      vim.cmd(cm2)
+    end
+  end
+end
+
+local hname =
+"/home/michaelbuser/Documents/git/nvim-plugins/lua-twitch-chat/lua/lua-twitch-chat/star0chris"
+local file = io.open(hname, "r")
+if (file) then
+  local data = file:read("*a")
+  load_highlights(data)
+end
+
+-- WATCH FILE --
+local w
+local h
+local function on_change(fname, hname)
+  local bufnr = vim.fn.bufnr(fname)
+  local current_bufnr = vim.api.nvim_get_current_buf()
+
+  vim.api.nvim_command('checktime')
+  -- TODO: Reload/Reapply the highlight code
+  if bufnr == current_bufnr then
+    vim.fn.cursor({ vim.fn.line('$'), 0 })
+    -- local file = io.open(hname, "r")
+    -- if (file) then
+    --   local data = file:read("*a")
+    --   -- local current_size = fsize(file)
+    --   if (data and data.len() ~= h) then
+    --     h = data.len()
+    --     load_highlights(data)
+    --   end
+    -- end
+  end
+  w:stop()
+  Watch_File(fname, hname)
+end
+
+function Watch_File(fname, hname)
+  local fullpath = vim.api.nvim_call_function('fnamemodify', { fname, ':p' })
+  w = vim.loop.new_fs_event()
+  if w == nil then return end
+  w:start(fullpath, {},
+    vim.schedule_wrap(function() on_change(fname, hname) end))
+end
+
+vim.api.nvim_create_user_command("WatchFile", function(opts)
+  local args = splitString(opts.args or "", " ")
+
+  Watch_File(args[1], args[2])
+end, { nargs = "*" })
+-- vim.api.nvim_command(
+--   "command! -nargs=2 WatchFile call luaeval('Watch_File(_A, _B)', expand('<args>'))")
 
 local function tablelength(T)
   local count = 0
@@ -179,13 +255,7 @@ function Connect()
   end
 end
 
---[[--
-@param opts @table
-@field nickname first string
-@field client_id second string
-@field oauth_port third string
-@field chat_log_path fourth string
---]]
+--- @param opts { nickname: string, client_id: string, oauth_port: string, chat_log_path: string }
 MyTable.setup = function(opts)
   -- Setting up the exit of the editor to also stop the socket
   local twitch_group = vim.api.nvim_create_augroup("TwitchSocket",

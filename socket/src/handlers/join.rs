@@ -1,9 +1,26 @@
 use chrono::{Datelike, Local, Timelike};
 use neovim_lib::{Neovim, NeovimApi};
-use std::sync::Arc;
+use std::{collections::HashMap, sync::Arc};
 use tokio::sync::RwLock;
 
 pub mod message_parser;
+
+fn get_existing_highlight_data(highlight_name: String) -> HashMap<String, String> {
+    let data = std::fs::read_to_string(highlight_name).unwrap();
+    let kvs = data.split("\n");
+
+    let mut map: HashMap<String, String> = HashMap::new();
+
+    for v in kvs {
+        let rec: Vec<&str> = v.split(",").collect();
+        let key = rec.first();
+        let value = rec.last();
+
+        map.insert(key.unwrap().to_string(), value.unwrap().to_string());
+    }
+
+    return map;
+}
 
 fn format_date(date: chrono::DateTime<Local>) -> String {
     format!(
@@ -101,7 +118,47 @@ pub async fn join(
     let path = chat_logs_folder_path_arc.read().await;
     let date = format_date(Local::now());
     let file_name = format!("{}/{channel}-{date}.chat", path.clone().to_string());
+    let highlight_name = format!(
+        "{}/highlights/{channel}.highlight",
+        path.clone().to_string()
+    );
+    /*
+        ~ Do the block below on each message
+        ~ Write to a file that can be reloaded
+            - LIST OF KEYWORDS (user_names): vim.cmd("syntax keyword {user_name} {user_name}")
+            - LIST OF GROUPS (hex_codes): vim.api.nvim_set_h1(0, "{HEXGROUP}", {...})
+            - LIST OF LINKS (or possible single joined command string): vim.cmd("highlight link {user_name} {hex_code}")
+
+
+        CREATE MAP FOR NAME TO COLOR
+        loop over users {
+            IF NAME DOES NOT EXIST IN MAP THEN
+                vim.cmd("syntax keyword {user_name} {user_name}")
+                CHECK IF HEX CODE EXISTS AS GROUP
+                    vim.api.nvim_get_hl
+                    vim.api.nvim_get_hl_id_by_name
+                IF GROUP DOES NOT EXIST THEN CREATE THE GROUP
+                    vim.api.nvim_set_h1(0, "{hex_code}", {...})
+                ADD KEYWORD TO GROUP
+                    vim.cmd("highlight link {user_name} {hex_code}")
+                ADD TO MAP FOR NAME TO COLOR
+            IF NAME EXISTS IN MAP BUT COLOR HAS CHANGED
+                ~REMOVE EXISTING LINK???~
+                ~
+                    CHECK IF HEX CODE EXISTS AS GROUP
+                        vim.api.nvim_get_hl
+                        vim.api.nvim_get_hl_id_by_name
+                    IF GROUP DOES NOT EXIST THEN CREATE THE GROUP
+                        vim.api.nvim_set_h1(0, "{hex_code}",)
+                    ADD KEYWORD TO GROUP
+                        vim.cmd("highlight link {user_name} {hex_code}")
+                ~
+        }
+    */
+    // star0chris,#ffffff
+
     message_parser::handle_file(file_name.clone().to_string(), "".to_string());
+    message_parser::handle_file(highlight_name.clone().to_string(), "".to_string());
 
     {
         let mut buffer_guard = buffers.write().await;
@@ -110,6 +167,7 @@ pub async fn join(
             message_parser::ChannelData {
                 buffer_id: None,
                 file_name: file_name.clone(),
+                highlight_name: highlight_name.clone(),
             },
         );
         drop(buffer_guard);
@@ -119,14 +177,17 @@ pub async fn join(
         let incoming_messages = Arc::clone(&incoming_messages_arc);
         let buffer_arc_clone = Arc::clone(&buffers);
         let chat_logs_folder_path_clone = Arc::clone(&chat_logs_folder_path_arc);
+        let highlight_file_name = highlight_name.clone();
 
         let join_handle = tokio::spawn(async move {
             let mut messages = incoming_messages.lock().await;
-            let buffers = buffer_arc_clone.read().await;
+            let mut buffers = buffer_arc_clone.read().await;
             let path = chat_logs_folder_path_clone.read().await;
+            let mut highligh_map: HashMap<String, String> =
+                get_existing_highlight_data(highlight_file_name);
 
             while let Some(message) = messages.recv().await {
-                message_parser::parse_message(message, &buffers, &path);
+                message_parser::parse_message(message, &mut buffers, &path, &mut highligh_map);
             }
         });
 
@@ -150,7 +211,7 @@ pub async fn join(
     }
 
     let _ = nvim.command(&format!("lua vim.cmd.edit(\"{file_name}\")"));
-    let _ = nvim.command(&format!("WatchFile %"));
+    let _ = nvim.command(&format!("WatchFile % {}", highlight_name));
     // | WatchFile
     // let _ = std::fs::File::create(file_name.clone()).unwrap();
     // nvim.command(format!("e \"{file_name}\"").as_str()).unwrap();

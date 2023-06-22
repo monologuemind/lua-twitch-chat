@@ -9,6 +9,7 @@ pub struct ChannelData {
     // Will always be writing them to a file
     // Unless we leave in which case struct is destroyed
     pub file_name: String,
+    pub highlight_name: String,
 }
 
 pub fn debug_write(data: String, debug: bool) {
@@ -70,6 +71,7 @@ pub fn parse_message(
     message: ServerMessage,
     buffers: &RwLockReadGuard<HashMap<String, ChannelData>>,
     path: &RwLockReadGuard<String>,
+    highlight_map: &mut HashMap<String, String>,
 ) {
     let debug = false;
     match message {
@@ -112,6 +114,30 @@ pub fn parse_message(
             //     return;
             // }
             handle_file(chat_log_file_path, data);
+            {
+                let user_current_color = highlight_map.get(&msg.sender.id);
+                if user_current_color.is_none() && msg.name_color.is_some() {
+                    // ADD TO HASHMAP AND FILE
+                    handle_file(
+                        channel_data.unwrap().highlight_name.clone(),
+                        format!(
+                            "{},{}\n",
+                            msg.sender.name,
+                            msg.name_color.unwrap().to_string()
+                        ),
+                    );
+
+                    highlight_map.insert(msg.sender.name, msg.name_color.unwrap().to_string());
+                }
+            }
+
+            // let user_current_color = highlight_map.get(&msg.sender.id);
+            // if user_current_color.is_some()
+            // && msg.name_color.is_some()
+            // && user_current_color.unwrap() != &msg.name_color.unwrap().to_string()
+            // {
+            //                // UPDATE HASHMAP AND FILE
+            // }
 
             // let mut file = std::fs::File::create(chat_log_file_path).unwrap();
             //
