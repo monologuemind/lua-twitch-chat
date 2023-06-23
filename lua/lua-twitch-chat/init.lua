@@ -70,14 +70,6 @@ local load_highlights = function(data)
   end
 end
 
-local hname =
-"/home/michaelbuser/Documents/git/nvim-plugins/lua-twitch-chat/lua/lua-twitch-chat/star0chris"
-local file = io.open(hname, "r")
-if (file) then
-  local data = file:read("*a")
-  load_highlights(data)
-end
-
 -- WATCH FILE --
 local w
 local h
@@ -86,18 +78,20 @@ local function on_change(fname, hname)
   local current_bufnr = vim.api.nvim_get_current_buf()
 
   vim.api.nvim_command('checktime')
-  -- TODO: Reload/Reapply the highlight code
+  vim.cmd("silent! execute 'buffer' " .. bufnr ..
+    " | silent! normal! G | execute 'buffer' bufnr('#')");
   if bufnr == current_bufnr then
+    -- vim.cmd(
+    --   "silent! execute 'buffer' " ..  .. " | silent! normal! G | execute 'buffer' bufnr('#')");
     vim.fn.cursor({ vim.fn.line('$'), 0 })
-    -- local file = io.open(hname, "r")
-    -- if (file) then
-    --   local data = file:read("*a")
-    --   -- local current_size = fsize(file)
-    --   if (data and data.len() ~= h) then
-    --     h = data.len()
-    --     load_highlights(data)
-    --   end
-    -- end
+    local file = io.open(hname, "r")
+    if (file) then
+      local data = file:read("*a")
+      if (data ~= nil and string.len(data) ~= h) then
+        h = string.len(data)
+        load_highlights(data)
+      end
+    end
   end
   w:stop()
   Watch_File(fname, hname)

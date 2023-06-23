@@ -116,46 +116,27 @@ pub async fn join(
     drop(buffer_guard);
 
     let path = chat_logs_folder_path_arc.read().await;
+
+    {
+        let path_exists = std::path::Path::new(&path.clone()).is_dir();
+
+        if !path_exists {
+            std::fs::create_dir(path.clone()).unwrap();
+        }
+
+        let h_path_exists = std::path::Path::new(&format!("{}/highlights", path.clone())).is_dir();
+
+        if !h_path_exists {
+            std::fs::create_dir(format!("{}/highlights", path.clone())).unwrap();
+        }
+    }
+
     let date = format_date(Local::now());
     let file_name = format!("{}/{channel}-{date}.chat", path.clone().to_string());
     let highlight_name = format!(
         "{}/highlights/{channel}.highlight",
         path.clone().to_string()
     );
-    /*
-        ~ Do the block below on each message
-        ~ Write to a file that can be reloaded
-            - LIST OF KEYWORDS (user_names): vim.cmd("syntax keyword {user_name} {user_name}")
-            - LIST OF GROUPS (hex_codes): vim.api.nvim_set_h1(0, "{HEXGROUP}", {...})
-            - LIST OF LINKS (or possible single joined command string): vim.cmd("highlight link {user_name} {hex_code}")
-
-
-        CREATE MAP FOR NAME TO COLOR
-        loop over users {
-            IF NAME DOES NOT EXIST IN MAP THEN
-                vim.cmd("syntax keyword {user_name} {user_name}")
-                CHECK IF HEX CODE EXISTS AS GROUP
-                    vim.api.nvim_get_hl
-                    vim.api.nvim_get_hl_id_by_name
-                IF GROUP DOES NOT EXIST THEN CREATE THE GROUP
-                    vim.api.nvim_set_h1(0, "{hex_code}", {...})
-                ADD KEYWORD TO GROUP
-                    vim.cmd("highlight link {user_name} {hex_code}")
-                ADD TO MAP FOR NAME TO COLOR
-            IF NAME EXISTS IN MAP BUT COLOR HAS CHANGED
-                ~REMOVE EXISTING LINK???~
-                ~
-                    CHECK IF HEX CODE EXISTS AS GROUP
-                        vim.api.nvim_get_hl
-                        vim.api.nvim_get_hl_id_by_name
-                    IF GROUP DOES NOT EXIST THEN CREATE THE GROUP
-                        vim.api.nvim_set_h1(0, "{hex_code}",)
-                    ADD KEYWORD TO GROUP
-                        vim.cmd("highlight link {user_name} {hex_code}")
-                ~
-        }
-    */
-    // star0chris,#ffffff
 
     message_parser::handle_file(file_name.clone().to_string(), "".to_string());
     message_parser::handle_file(highlight_name.clone().to_string(), "".to_string());
@@ -211,7 +192,8 @@ pub async fn join(
     }
 
     let _ = nvim.command(&format!("lua vim.cmd.edit(\"{file_name}\")"));
-    let _ = nvim.command(&format!("WatchFile % {}", highlight_name));
+    let _ = nvim.command(&format!("WatchFile {file_name} {highlight_name}"));
+    let _ = nvim.command("setlocal wrap");
     // | WatchFile
     // let _ = std::fs::File::create(file_name.clone()).unwrap();
     // nvim.command(format!("e \"{file_name}\"").as_str()).unwrap();

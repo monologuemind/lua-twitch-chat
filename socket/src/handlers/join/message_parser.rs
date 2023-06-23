@@ -1,3 +1,4 @@
+use rand::Rng;
 use std::collections::HashMap;
 use std::{fs::OpenOptions, io::Write};
 use tokio::sync::RwLockReadGuard;
@@ -10,6 +11,19 @@ pub struct ChannelData {
     // Unless we leave in which case struct is destroyed
     pub file_name: String,
     pub highlight_name: String,
+}
+
+fn get_random_color() -> String {
+    let mut rng = rand::thread_rng();
+    let hex_chars: Vec<char> = "0123456789abcdef".chars().collect();
+
+    let mut result = String::new();
+    for _ in 0..6 {
+        let random_index = rng.gen_range(0..16);
+        result.push(hex_chars[random_index]);
+    }
+
+    result
 }
 
 pub fn debug_write(data: String, debug: bool) {
@@ -61,12 +75,6 @@ pub fn handle_file(file_path: String, data: String) {
     }
 }
 
-// TODO(Buser): Parse the message
-// * get the associated buffer by channel name
-// * check file length of ChannelData file_name
-// * if max create new file and update ChannelData (might be an
-//   issue with multiple locks going on, one read and one write)
-// * append message to file
 pub fn parse_message(
     message: ServerMessage,
     buffers: &RwLockReadGuard<HashMap<String, ChannelData>>,
@@ -76,10 +84,7 @@ pub fn parse_message(
     let debug = false;
     match message {
         ServerMessage::Privmsg(msg) => {
-            let data = format!(
-                "in {} -> {}: {}\n",
-                msg.channel_login, msg.sender.name, msg.message_text
-            );
+            let data = format!("{}: {}\n", msg.sender.name, msg.message_text);
             debug_write(data.clone(), debug);
 
             let channel_data = buffers.get(&msg.channel_login);
@@ -98,53 +103,55 @@ pub fn parse_message(
             }
 
             let chat_log_file_path = channel_data.unwrap().file_name.clone();
-            // let chat_log_file_exists = std::path::Path::new(&chat_log_file_path).exists();
-            //
-            // if chat_log_file_exists {
-            //     let mut file = OpenOptions::new()
-            //         .write(true)
-            //         .append(true)
-            //         .open(chat_log_file_path.clone())
-            //         .unwrap();
-            //
-            //     if let Err(e) = file.write_all(data.as_bytes()) {
-            //         // TODO(Buser): Do something about this one
-            //         debug_write("error appending".to_string(), debug);
-            //     }
-            //     return;
-            // }
             handle_file(chat_log_file_path, data);
+
             {
-                let user_current_color = highlight_map.get(&msg.sender.id);
-                if user_current_color.is_none() && msg.name_color.is_some() {
+                let user_current_color = highlight_map.get(&msg.sender.name);
+                if user_current_color.is_none() {
                     // ADD TO HASHMAP AND FILE
+                    let new_color = if msg.name_color.is_some() {
+                        msg.name_color.unwrap().to_string()
+                    } else {
+                        format!("#{}", get_random_color()).to_string()
+                    };
+
                     handle_file(
                         channel_data.unwrap().highlight_name.clone(),
-                        format!(
-                            "{},{}\n",
-                            msg.sender.name,
-                            msg.name_color.unwrap().to_string()
-                        ),
+                        format!("{},{}\n", msg.sender.name, new_color),
                     );
 
-                    highlight_map.insert(msg.sender.name, msg.name_color.unwrap().to_string());
+                    highlight_map.insert(msg.sender.name.clone(), new_color);
                 }
             }
 
-            // let user_current_color = highlight_map.get(&msg.sender.id);
-            // if user_current_color.is_some()
-            // && msg.name_color.is_some()
-            // && user_current_color.unwrap() != &msg.name_color.unwrap().to_string()
-            // {
-            //                // UPDATE HASHMAP AND FILE
-            // }
+            {
+                let user_current_color = highlight_map.get(&msg.sender.name);
+                if user_current_color.is_some()
+                    && msg.name_color.is_some()
+                    && user_current_color.unwrap() != &msg.name_color.unwrap().to_string()
+                {
+                    let data =
+                        std::fs::read_to_string(channel_data.unwrap().highlight_name.clone())
+                            .unwrap();
+                    let from = format!("{},{}\n", msg.sender.name, user_current_color.unwrap());
+                    let to = format!(
+                        "{},{}\n",
+                        msg.sender.name,
+                        &msg.name_color.unwrap().to_string()
+                    );
+                    let new = data.replace(from.as_str(), to.as_str());
+                    // UPDATE HASHMAP AND FILE
+                    let mut file = OpenOptions::new()
+                        .write(true)
+                        .truncate(true)
+                        .open(channel_data.unwrap().highlight_name.clone())
+                        .unwrap();
+                    file.write(new.as_bytes()).unwrap();
 
-            // let mut file = std::fs::File::create(chat_log_file_path).unwrap();
-            //
-            // if let Err(e) = file.write_all(data.as_bytes()) {
-            //     // TODO(Buser): Do something about this one
-            //     debug_write("error initial writing".to_string(), debug);
-            // }
+                    *highlight_map.get_mut(&msg.sender.name.clone()).unwrap() =
+                        msg.name_color.unwrap().to_string();
+                }
+            }
         }
 
         _ => {
