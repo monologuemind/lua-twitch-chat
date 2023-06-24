@@ -27,6 +27,7 @@ local function splitString(str, delimiter)
   return result
 end
 
+---@param str string
 local function stringToBinary(str)
   local binaryStr = ""
 
@@ -46,7 +47,7 @@ local function stringToBinary(str)
 
   return binaryStr
 end
--- star0chris
+
 --- @param data string
 local load_highlights = function(data)
   ---@type { [string]: nil | string[] }
@@ -71,18 +72,18 @@ local load_highlights = function(data)
 end
 
 -- WATCH FILE --
+-- TODO: Allow for multiple chats
 local w
 local h
+
+---@param fname string
+---@param hname string
 local function on_change(fname, hname)
   local bufnr = vim.fn.bufnr(fname)
   local current_bufnr = vim.api.nvim_get_current_buf()
 
   vim.api.nvim_command('checktime')
-  vim.cmd("silent! execute 'buffer' " .. bufnr ..
-    " | silent! normal! G | execute 'buffer' bufnr('#')");
   if bufnr == current_bufnr then
-    -- vim.cmd(
-    --   "silent! execute 'buffer' " ..  .. " | silent! normal! G | execute 'buffer' bufnr('#')");
     vim.fn.cursor({ vim.fn.line('$'), 0 })
     local file = io.open(hname, "r")
     if (file) then
@@ -92,11 +93,18 @@ local function on_change(fname, hname)
         load_highlights(data)
       end
     end
+  else
+    -- print(bufnr, current_bufnr)
+    -- vim.cmd("execute 'silent! " .. bufnr .. " | normal! G'")
+    -- vim.cmd("keepjumps silent! execute 'buffer' " .. bufnr ..
+    --   " | silent! normal! G | execute 'normal! zz' | execute 'buffer' bufnr('#')");
   end
   w:stop()
   Watch_File(fname, hname)
 end
 
+---@param fname string
+---@param hname string
 function Watch_File(fname, hname)
   local fullpath = vim.api.nvim_call_function('fnamemodify', { fname, ':p' })
   w = vim.loop.new_fs_event()
@@ -113,6 +121,7 @@ end, { nargs = "*" })
 -- vim.api.nvim_command(
 --   "command! -nargs=2 WatchFile call luaeval('Watch_File(_A, _B)', expand('<args>'))")
 
+---@param T table
 local function tablelength(T)
   local count = 0
   for _ in pairs(T) do count = count + 1 end
@@ -142,13 +151,7 @@ MyTable = {}
 --   thread = nil
 -- }
 
---[[--
-@param opts @table
-  @field nickname string
-  @field client_id string
-  @field oauth_port string
-  @field chat_log_path string
---]]
+--- @param opts { nickname: string, client_id: string, oauth_port: string, chat_log_path: string }
 local function twitch_init(opts)
   if Twitch_JobId == 0 or not opts.nickname or not opts.client_id or
       not opts.oauth_port or not opts.chat_log_path then
@@ -164,6 +167,7 @@ local function twitch_init(opts)
 end
 
 function ConfigureCommands()
+  --- @param opts { args: string }
   vim.api.nvim_create_user_command("TwitchView", function(opts)
     local args = splitString(opts.args or "", " ")
     vim.rpcnotify(Twitch_JobId, Twitch_View, args[1])
@@ -182,6 +186,7 @@ function ConfigureCommands()
     -- vim.rpcnotify(Twitch_JobId, Twitch_Unknown)
   end, {})
 
+  ---@param opts { args: string }
   vim.api.nvim_create_user_command("TwitchInit", function(opts)
     local args = splitString(opts.args or "", " ")
 
@@ -204,6 +209,7 @@ function ConfigureCommands()
     vim.rpcnotify(Twitch_JobId, Twitch_Oauth)
   end, { nargs = "?" })
 
+  ---@param opts { args: string }
   vim.api.nvim_create_user_command("TwitchJoin", function(opts)
     local args = splitString(opts.args or "", " ")
 
@@ -237,19 +243,23 @@ function InitTwitchRpc()
 end
 
 -- Entry point. Initialize RPC. If it succeeds, then attach commands to the `rpcnotify` invocations.
-function Connect()
+--- @param opts { nickname: string, client_id: string, oauth_port: string, chat_log_path: string, auto_start: boolean }
+function Connect(opts)
   InitTwitchRpc()
 
   if Twitch_JobId == 0 then
     print("Twitch: cannot start rpc process")
   elseif Twitch_JobId == -1 then
     print("Twitch: rpc process is not executable")
-  else
-    ConfigureCommands()
+  end
+
+  if Twitch_JobId and opts.nickname and opts.client_id and opts.oauth_port and
+      opts.chat_log_path then
+    twitch_init(opts)
   end
 end
 
---- @param opts { nickname: string, client_id: string, oauth_port: string, chat_log_path: string }
+--- @param opts { nickname: string, client_id: string, oauth_port: string, chat_log_path: string, auto_start: boolean }
 MyTable.setup = function(opts)
   -- Setting up the exit of the editor to also stop the socket
   local twitch_group = vim.api.nvim_create_augroup("TwitchSocket",
@@ -261,12 +271,11 @@ MyTable.setup = function(opts)
     end
   })
 
-  Connect()
+  if opts.auto_start then Connect(opts) end
+  ConfigureCommands()
 
-  if Twitch_JobId and opts.nickname and opts.client_id and opts.oauth_port and
-      opts.chat_log_path then
-    twitch_init(opts)
-  end
+  vim.api.nvim_create_user_command("TwitchSetup",
+    function() Connect(opts) end, { nargs = "?" })
 end
 
 return MyTable

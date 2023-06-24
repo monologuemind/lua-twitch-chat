@@ -43,7 +43,6 @@ pub async fn init(
 
     let mut args = parsed_values.iter();
 
-    nvim.command(&format!("echo \"args\"",)).unwrap();
     // TODO(Buser): check for errors on unwrap
     let nickname = args.next().unwrap().to_string();
     let client_id = args.next().unwrap().to_string();
@@ -52,11 +51,6 @@ pub async fn init(
 
     let mut handle = chat_logs_folder_path_arc.write().await;
     *handle = chat_logs_folder_path;
-
-    nvim.command(&format!(
-        "echo \"Successfully ran TwitchInit, run TwitchOAuth to create a connection\"",
-    ))
-    .unwrap();
 
     return Option::from(InitValues {
         nickname: Option::from(nickname),
