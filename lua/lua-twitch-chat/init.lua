@@ -65,12 +65,29 @@ local function stringToBinary(str)
   return binaryStr
 end
 
+--- @param hexCode string
+local function isColorLight(hexCode)
+  -- Remove the '#' symbol from the beginning of the hex code
+  local hex = string.sub(hexCode, 2)
+
+  -- Convert hex to RGB values
+  local r = tonumber(string.sub(hex, 1, 2), 16)
+  local g = tonumber(string.sub(hex, 3, 4), 16)
+  local b = tonumber(string.sub(hex, 5, 6), 16)
+
+  -- Calculate relative luminance using the sRGB color space formula
+  local relativeLuminance = (0.2126 * r + 0.7152 * g + 0.0722 * b) / 255
+
+  -- Compare relative luminance to a threshold value (0.5) to determine if it is a light color
+  return relativeLuminance > 0.5
+end
+
 --- @param data string
 local load_highlights = function(data)
   ---@type { [string]: nil | string[] }
   local hex_groups = {}
   local user_colors = splitString(data, "\n")
-  for i, v in pairs(user_colors) do
+  for _, v in pairs(user_colors) do
     local key_value_pair = splitString(v, ",")
     local group_exists = hex_groups[key_value_pair[2]]
     if group_exists == nil then hex_groups[key_value_pair[2]] = {} end
@@ -78,8 +95,10 @@ local load_highlights = function(data)
   end
   for hex_code, user_names in pairs(hex_groups) do
     local binary_code = stringToBinary(hex_code)
-    vim.api.nvim_set_hl(0, binary_code, { fg = hex_code })
-    for j, user_name in pairs(user_names) do
+    local background = "#000000"
+    if isColorLight(hex_code) then background = "#ffffff" end
+    vim.api.nvim_set_hl(0, binary_code, { fg = hex_code, bg = background })
+    for _, user_name in pairs(user_names) do
       local cm1 = "syntax keyword " .. user_name .. " " .. user_name
       vim.cmd(cm1)
       local cm2 = "highlight link " .. user_name .. " " .. binary_code
