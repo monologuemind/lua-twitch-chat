@@ -133,8 +133,10 @@ local function on_change(fname, hname)
   else
     -- THIS IS SUPER CLOSE: BLOCKING  AND ONLY WORKED UNTIL IT HAD TEXT BEYOND ITSELF
     vim.schedule(function()
-      vim.cmd("silent execute 'buffer' " .. bufnr ..
-        " | execute \"normal G\"")
+      vim.api.nvim_set_current_buf(bufnr)
+      vim.fn.cursor({ vim.fn.line('$'), 0 })
+      -- vim.cmd("silent execute 'buffer' " .. bufnr ..
+      --   " | execute \"normal G\"")
       local file = io.open(hname, "r")
       if (file) then
         local data = file:read("*a")
@@ -143,7 +145,8 @@ local function on_change(fname, hname)
           load_highlights(data)
         end
       end
-      vim.cmd("execute 'buffer' " .. current_bufnr)
+      vim.api.nvim_set_current_buf(current_bufnr)
+      -- vim.cmd("execute 'buffer' " .. current_bufnr)
     end)
 
     -- print(bufnr, current_bufnr)
