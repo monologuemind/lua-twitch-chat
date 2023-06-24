@@ -95,8 +95,8 @@ local load_highlights = function(data)
   end
   for hex_code, user_names in pairs(hex_groups) do
     local binary_code = stringToBinary(hex_code)
-    local background = "#000000"
-    if isColorLight(hex_code) then background = "#ffffff" end
+    local background = "#ffffff"
+    if isColorLight(hex_code) then background = "#000000" end
     vim.api.nvim_set_hl(0, binary_code, { fg = hex_code, bg = background })
     for _, user_name in pairs(user_names) do
       local cm1 = "syntax keyword " .. user_name .. " " .. user_name
