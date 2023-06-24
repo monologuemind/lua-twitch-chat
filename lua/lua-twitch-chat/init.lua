@@ -97,7 +97,8 @@ local load_highlights = function(data)
     local binary_code = stringToBinary(hex_code)
     local background = "#ffffff"
     if isColorLight(hex_code) then background = "#000000" end
-    vim.api.nvim_set_hl(0, binary_code, { fg = hex_code, bg = background })
+    vim.api.nvim_set_hl(0, binary_code,
+      { fg = hex_code, bg = background, bold = true })
     for _, user_name in pairs(user_names) do
       local cm1 = "syntax keyword " .. user_name .. " " .. user_name
       vim.cmd(cm1)
