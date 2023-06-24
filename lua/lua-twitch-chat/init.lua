@@ -111,14 +111,27 @@ local function on_change(fname, hname)
       end
     end
   else
-    vim.cmd("silent execute 'buffer' " .. bufnr ..
-      " | execute \"normal G\" | execute 'buffer' " ..
-      current_bufnr)
+    -- THIS IS SUPER CLOSE: BLOCKING  AND ONLY WORKED UNTIL IT HAD TEXT BEYOND ITSELF
+    vim.schedule(function()
+      vim.cmd("silent execute 'buffer' " .. bufnr ..
+        " | execute \"normal G\"")
+      local file = io.open(hname, "r")
+      if (file) then
+        local data = file:read("*a")
+        if (data ~= nil and string.len(data) ~= h) then
+          h = string.len(data)
+          load_highlights(data)
+        end
+      end
+      vim.cmd("execute 'buffer' " .. current_bufnr)
+    end)
+
     -- print(bufnr, current_bufnr)
     -- vim.cmd("execute 'silent! " .. bufnr .. " | normal! G'")
     -- vim.cmd("keepjumps silent! execute 'buffer' " .. bufnr ..
     --   " | silent! normal! G | execute 'normal! zz' | execute 'buffer' bufnr('#')");
   end
+
   w:stop()
   Watch_File(fname, hname)
 end
