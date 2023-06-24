@@ -174,8 +174,9 @@ function ConfigureCommands()
   end, { nargs = "?" })
 
   vim.api.nvim_create_user_command("TwitchExit", function()
-    vim.rpcrequest(Twitch_JobId, Twitch_Exit)
-    vim.fn.jobstop(Target_Application)
+    vim.rpcnotify(Twitch_JobId, Twitch_Exit)
+    Twitch_JobId = 0;
+    -- vim.fn.jobstop(Target_Application)
   end, {})
 
   vim.api.nvim_create_user_command("TwitchTest", function()

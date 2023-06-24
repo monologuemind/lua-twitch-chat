@@ -2,7 +2,6 @@ use neovim_lib::{Neovim, NeovimApi, Session, Value};
 use std::{collections::HashMap, sync::Arc};
 use tokio::sync::{Mutex, RwLock};
 
-mod buffer;
 mod handlers;
 
 enum Messages {
@@ -213,10 +212,6 @@ impl EventHandler {
                 }
 
                 Messages::Exit => {
-                    for handle in join_handles.iter() {
-                        handle.abort();
-                    }
-
                     self.end = true;
                 }
 
