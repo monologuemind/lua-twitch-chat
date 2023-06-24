@@ -13,7 +13,6 @@ pub async fn init(
     values: &Vec<Value>,
     chat_logs_folder_path_arc: &Arc<RwLock<String>>,
 ) -> Option<InitValues> {
-    nvim.command(&format!("echo \"enter\"",)).unwrap();
     let mut error = false;
     let parsed_values: Vec<&str> = values
         .iter()

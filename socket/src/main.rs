@@ -1,5 +1,5 @@
 use neovim_lib::{Neovim, NeovimApi, Session, Value};
-use std::{collections::HashMap, sync::Arc};
+use std::{collections::HashMap, process::exit, sync::Arc};
 use tokio::sync::{Mutex, RwLock};
 
 mod handlers;
@@ -57,7 +57,6 @@ struct EventHandler {
         >,
     >,
     listening: bool,
-    end: bool,
 }
 
 impl EventHandler {
@@ -72,7 +71,6 @@ impl EventHandler {
             oauth_port: String::from("6969"),
             client: None,
             listening: false,
-            end: false,
         }
     }
 
@@ -96,11 +94,6 @@ impl EventHandler {
         let receiver = self.nvim.session.start_event_loop_channel();
 
         for (event, values) in receiver {
-            // TODO(Buser): Figure out how we exit this shit
-            if self.end {
-                break;
-            }
-
             match Messages::from(event.clone()) {
                 Messages::Test => {
                     self.nvim.command("echo \"testing\"").unwrap();
@@ -205,14 +198,17 @@ impl EventHandler {
                     }
 
                     let file_name = channel_data.unwrap().file_name.clone();
+                    let highlight_name = channel_data.unwrap().highlight_name.clone();
                     let _ = self
                         .nvim
                         .command(&format!("lua vim.cmd.edit(\"{file_name}\")"));
-                    let _ = self.nvim.command(&format!("WatchFile %"));
+                    let _ = self
+                        .nvim
+                        .command(&format!("WatchFile {file_name} {highlight_name}"));
                 }
 
                 Messages::Exit => {
-                    self.end = true;
+                    exit(0);
                 }
 
                 Messages::Send => {

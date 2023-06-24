@@ -1,3 +1,22 @@
+-- Initialize the channel
+if not Twitch_JobId then Twitch_JobId = 0 end
+
+-- Constants for RPC messages
+Twitch_Oauth = 'oauth'
+Twitch_Init = 'init'
+Twitch_Test = 'test'
+Twitch_Exit = 'exit'
+Twitch_View = 'view'
+Twitch_Unknown = 'unknown'
+Twitch_Join = 'join'
+
+-- The path to the binary that was created out of 'cargo build' or 'cargo build --release'. This will generally be 'target/release/name'
+Target_Application =
+'/home/michaelbuser/Documents/git/nvim-plugins/lua-twitch-chat/socket/target/debug/socket'
+
+-- Just a table that we will return with some stuff on it
+MyTable = {}
+
 function GetOperatingSystem()
   local osName = string.lower((ffi and ffi.os) or (os and os.getenv("OS")) or
     (io and io.popen("uname -s"):read("*l")))
@@ -12,8 +31,6 @@ function GetOperatingSystem()
     return "Unknown"
   end
 end
-
--- print(getOperatingSystem())
 
 ---@param str string
 ---@param delimiter string
@@ -79,9 +96,9 @@ local h
 ---@param fname string
 ---@param hname string
 local function on_change(fname, hname)
+  -- WAIT: Don't change this. It actually works if you pass a string
   local bufnr = vim.fn.bufnr(fname)
   local current_bufnr = vim.api.nvim_get_current_buf()
-
   vim.api.nvim_command('checktime')
   if bufnr == current_bufnr then
     vim.fn.cursor({ vim.fn.line('$'), 0 })
@@ -94,6 +111,9 @@ local function on_change(fname, hname)
       end
     end
   else
+    vim.cmd("silent execute 'buffer' " .. bufnr ..
+      " | execute \"normal G\" | execute 'buffer' " ..
+      current_bufnr)
     -- print(bufnr, current_bufnr)
     -- vim.cmd("execute 'silent! " .. bufnr .. " | normal! G'")
     -- vim.cmd("keepjumps silent! execute 'buffer' " .. bufnr ..
@@ -127,29 +147,6 @@ local function tablelength(T)
   for _ in pairs(T) do count = count + 1 end
   return count
 end
-
--- Initialize the channel
-if not Twitch_JobId then Twitch_JobId = 0 end
-
--- Constants for RPC messages
-Twitch_Oauth = 'oauth'
-Twitch_Init = 'init'
-Twitch_Test = 'test'
-Twitch_Exit = 'exit'
-Twitch_View = 'view'
-Twitch_Unknown = 'unknown'
-Twitch_Join = 'join'
-
--- The path to the binary that was created out of 'cargo build' or 'cargo build --release'. This will generally be 'target/release/name'
-Target_Application =
-'/home/michaelbuser/Documents/git/nvim-plugins/lua-twitch-chat/socket/target/debug/socket'
-
-MyTable = {}
--- MyTable.settings = {
---   file = "/home/michaelbuser/Documents/git/nvim-plugins/lua-twitch-chat/socket/target/debug/socket",
---   -- file = nil,
---   thread = nil
--- }
 
 --- @param opts { nickname: string, client_id: string, oauth_port: string, chat_log_path: string }
 local function twitch_init(opts)
