@@ -1,3 +1,8 @@
+---@type { splitString: fun(name: string, delimiter: string): table; stringToBinary: fun(str: string): string; getOperatingSystem: fun(): string; tablelength: fun(T: table): integer }
+local helpers = require "./helpers.lua"
+---@type { isColorLight: fun(str: string): boolean; load_highlights: fun(data: string) }
+local highlights = require "./highlights.lua"
+
 -- Initialize the channel
 if not Twitch_JobId then Twitch_JobId = 0 end
 
@@ -14,99 +19,10 @@ Twitch_Join = 'join'
 Target_Application =
 '/home/michaelbuser/Documents/git/nvim-plugins/lua-twitch-chat/socket/target/debug/socket'
 
+print(vim.cmd("pwd"))
+
 -- Just a table that we will return with some stuff on it
 MyTable = {}
-
-function GetOperatingSystem()
-  local osName = string.lower((ffi and ffi.os) or (os and os.getenv("OS")) or
-    (io and io.popen("uname -s"):read("*l")))
-
-  if osName:match("linux") then
-    return "Linux"
-  elseif osName:match("darwin") then
-    return "Mac"
-  elseif osName:match("windows") then
-    return "Windows"
-  else
-    return "Unknown"
-  end
-end
-
----@param str string
----@param delimiter string
-local function splitString(str, delimiter)
-  local result = {}
-
-  for match in string.gmatch(str, "[^" .. delimiter .. "]+") do
-    table.insert(result, match)
-  end
-
-  return result
-end
-
----@param str string
-local function stringToBinary(str)
-  local binaryStr = ""
-
-  -- Iterate over each character in the string
-  for i = 1, #str do
-    local char = str:sub(i, i)     -- Get the current character
-
-    -- Convert the character to its ASCII value
-    local asciiValue = string.byte(char)
-
-    -- Convert the ASCII value to binary representation
-    local binaryValue = string.format("%08d", tonumber(asciiValue, 10))
-
-    -- Append the binary representation to the result
-    binaryStr = binaryStr .. binaryValue
-  end
-
-  return binaryStr
-end
-
---- @param hexCode string
-local function isColorLight(hexCode)
-  -- Remove the '#' symbol from the beginning of the hex code
-  local hex = string.sub(hexCode, 2)
-
-  -- Convert hex to RGB values
-  local r = tonumber(string.sub(hex, 1, 2), 16)
-  local g = tonumber(string.sub(hex, 3, 4), 16)
-  local b = tonumber(string.sub(hex, 5, 6), 16)
-
-  -- Calculate relative luminance using the sRGB color space formula
-  local relativeLuminance = (0.2126 * r + 0.7152 * g + 0.0722 * b) / 255
-
-  -- Compare relative luminance to a threshold value (0.5) to determine if it is a light color
-  return relativeLuminance > 0.5
-end
-
---- @param data string
-local load_highlights = function(data)
-  ---@type { [string]: nil | string[] }
-  local hex_groups = {}
-  local user_colors = splitString(data, "\n")
-  for _, v in pairs(user_colors) do
-    local key_value_pair = splitString(v, ",")
-    local group_exists = hex_groups[key_value_pair[2]]
-    if group_exists == nil then hex_groups[key_value_pair[2]] = {} end
-    table.insert(hex_groups[key_value_pair[2]], key_value_pair[1])
-  end
-  for hex_code, user_names in pairs(hex_groups) do
-    local binary_code = stringToBinary(hex_code)
-    local background = "#ffffff"
-    if isColorLight(hex_code) then background = "#000000" end
-    vim.api.nvim_set_hl(0, binary_code,
-      { fg = hex_code, bg = background, bold = true })
-    for _, user_name in pairs(user_names) do
-      local cm1 = "syntax keyword " .. user_name .. " " .. user_name
-      vim.cmd(cm1)
-      local cm2 = "highlight link " .. user_name .. " " .. binary_code
-      vim.cmd(cm2)
-    end
-  end
-end
 
 -- WATCH FILE --
 -- TODO: Allow for multiple chats
@@ -127,7 +43,7 @@ local function on_change(fname, hname)
       local data = file:read("*a")
       if (data ~= nil and string.len(data) ~= h) then
         h = string.len(data)
-        load_highlights(data)
+        highlights.load_highlights(data)
       end
     end
   else
@@ -142,7 +58,7 @@ local function on_change(fname, hname)
         local data = file:read("*a")
         if (data ~= nil and string.len(data) ~= h) then
           h = string.len(data)
-          load_highlights(data)
+          highlights.load_highlights(data)
         end
       end
       vim.api.nvim_set_current_buf(current_bufnr)
@@ -170,19 +86,10 @@ function Watch_File(fname, hname)
 end
 
 vim.api.nvim_create_user_command("WatchFile", function(opts)
-  local args = splitString(opts.args or "", " ")
+  local args = helpers.splitString(opts.args or "", " ")
 
   Watch_File(args[1], args[2])
 end, { nargs = "*" })
--- vim.api.nvim_command(
---   "command! -nargs=2 WatchFile call luaeval('Watch_File(_A, _B)', expand('<args>'))")
-
----@param T table
-local function tablelength(T)
-  local count = 0
-  for _ in pairs(T) do count = count + 1 end
-  return count
-end
 
 --- @param opts { nickname: string, client_id: string, oauth_port: string, chat_log_path: string }
 local function twitch_init(opts)
@@ -197,76 +104,6 @@ local function twitch_init(opts)
 
   vim.rpcnotify(Twitch_JobId, Twitch_Init, opts.nickname, opts.client_id,
     opts.oauth_port, opts.chat_log_path)
-end
-
-function ConfigureCommands()
-  --- @param opts { args: string }
-  vim.api.nvim_create_user_command("TwitchView", function(opts)
-    local args = splitString(opts.args or "", " ")
-    vim.rpcnotify(Twitch_JobId, Twitch_View, args[1])
-  end, { nargs = "?" })
-
-  vim.api.nvim_create_user_command("TwitchExit", function()
-    vim.rpcnotify(Twitch_JobId, Twitch_Exit)
-    Twitch_JobId = 0;
-    -- vim.fn.jobstop(Target_Application)
-  end, {})
-
-  vim.api.nvim_create_user_command("TwitchTest", function()
-    vim.rpcnotify(Twitch_JobId, Twitch_Test)
-  end, {})
-
-  vim.api.nvim_create_user_command("TwitchUnknown", function()
-    -- vim.rpcnotify(Twitch_JobId, Twitch_Unknown)
-  end, {})
-
-  ---@param opts { args: string }
-  vim.api.nvim_create_user_command("TwitchInit", function(opts)
-    local args = splitString(opts.args or "", " ")
-
-    if tablelength(args) ~= 4 then
-      vim.notify(
-        "TwitchInit requires only 4 arguments: nickname client_id port chat_log_path",
-        vim.log.levels.ERROR)
-      return
-    end
-
-    twitch_init({
-      nickname = args[0],
-      client_id = args[1],
-      oauth_port = args[2],
-      chat_log_path = args[3]
-    })
-  end, { nargs = "*" })
-
-  vim.api.nvim_create_user_command("TwitchOAuth", function()
-    vim.rpcnotify(Twitch_JobId, Twitch_Oauth)
-  end, { nargs = "?" })
-
-  ---@param opts { args: string }
-  vim.api.nvim_create_user_command("TwitchJoin", function(opts)
-    local args = splitString(opts.args or "", " ")
-
-    if tablelength(args) == 0 then
-      vim.notify("No arguments passed", vim.log.levels.ERROR)
-      return
-    end
-
-    vim.rpcnotify(Twitch_JobId, Twitch_Join, args[1])
-  end, { nargs = "?" })
-
-  vim.api.nvim_create_user_command("TwitchBuf", function()
-    local buf = vim.api.nvim_create_buf(true, false)
-    vim.api.nvim_buf_set_name(buf, "MyBuffer")
-
-    -- Set the initial data in the buffer
-    local data = "Hello, world!"
-    vim.api.nvim_buf_set_lines(buf, 0, -1, false, { data })
-
-    -- Open the buffer in a new split window
-    vim.cmd("split")
-    vim.api.nvim_win_set_buf(0, buf)
-  end, { nargs = "?" })
 end
 
 -- Initialize RPC
@@ -306,7 +143,7 @@ MyTable.setup = function(opts)
   })
 
   if opts.auto_start then Connect(opts) end
-  ConfigureCommands()
+  ConfigureCommands(twitch_init)
 
   vim.api.nvim_create_user_command("TwitchSetup",
     function() Connect(opts) end, { nargs = "?" })
