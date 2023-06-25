@@ -1,8 +1,7 @@
----@type { splitString: fun(name: string, delimiter: string): table; stringToBinary: fun(str: string): string; getOperatingSystem: fun(): string; tablelength: fun(T: table): integer }
-local helpers = dofile("./helpers.lua")
+local helpers = require("lua-twitch-chat.helpers")
 
 ---@param twitch_init fun(opts: { nickname: string, client_id: string, oauth_port: string, chat_log_path: string })
-function ConfigureCommands(twitch_init)
+local function configureCommands(twitch_init)
   --- @param opts { args: string }
   vim.api.nvim_create_user_command("TwitchView", function(opts)
     local args = helpers.splitString(opts.args or "", " ")
@@ -71,3 +70,5 @@ function ConfigureCommands(twitch_init)
     vim.api.nvim_win_set_buf(0, buf)
   end, { nargs = "?" })
 end
+
+return { configureCommands = configureCommands }

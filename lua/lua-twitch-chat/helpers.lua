@@ -1,5 +1,3 @@
----@module 'helpers'
----@type fun(): string
 local function getOperatingSystem()
   local osName = string.lower((ffi and ffi.os) or (os and os.getenv("OS")) or
     (io and io.popen("uname -s"):read("*l")))

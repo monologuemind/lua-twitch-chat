@@ -1,5 +1,4 @@
----@type { splitString: fun(name: string, delimiter: string): table; stringToBinary: fun(str: string): string; getOperatingSystem: fun(): string }
-local helpers = dofile("./helpers.lua")
+local helpers = require("lua-twitch-chat.helpers")
 
 --- @param hexCode string
 local function isColorLight(hexCode)

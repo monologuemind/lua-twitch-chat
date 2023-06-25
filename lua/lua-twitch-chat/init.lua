@@ -1,7 +1,6 @@
----@type { splitString: fun(name: string, delimiter: string): table; stringToBinary: fun(str: string): string; getOperatingSystem: fun(): string; tablelength: fun(T: table): integer }
-local helpers = dofile("./helpers.lua")
----@type { isColorLight: fun(str: string): boolean; load_highlights: fun(data: string) }
-local highlights = dofile("./highlights.lua")
+local helpers = require("lua-twitch-chat.helpers")
+local highlights = require("lua-twitch-chat.highlights")
+local commands = require("lua-twitch-chat.commands")
 
 -- Initialize the channel
 if not Twitch_JobId then Twitch_JobId = 0 end
@@ -143,7 +142,7 @@ MyTable.setup = function(opts)
   })
 
   if opts.auto_start then Connect(opts) end
-  ConfigureCommands(twitch_init)
+  commands.configureCommands(twitch_init)
 
   vim.api.nvim_create_user_command("TwitchSetup",
     function() Connect(opts) end, { nargs = "?" })
