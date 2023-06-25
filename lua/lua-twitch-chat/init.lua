@@ -13,6 +13,7 @@ Twitch_Exit = 'exit'
 Twitch_View = 'view'
 Twitch_Unknown = 'unknown'
 Twitch_Join = 'join'
+Twitch_Authed = false
 
 -- The path to the binary that was created out of 'cargo build' or 'cargo build --release'. This will generally be 'target/release/name'
 Target_Application =
