@@ -18,8 +18,6 @@ Twitch_Join = 'join'
 Target_Application =
 '/home/michaelbuser/Documents/git/nvim-plugins/lua-twitch-chat/socket/target/debug/socket'
 
-print(vim.cmd("pwd"))
-
 -- Just a table that we will return with some stuff on it
 MyTable = {}
 
