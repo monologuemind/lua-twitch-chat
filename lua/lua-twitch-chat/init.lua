@@ -1,7 +1,7 @@
 ---@type { splitString: fun(name: string, delimiter: string): table; stringToBinary: fun(str: string): string; getOperatingSystem: fun(): string; tablelength: fun(T: table): integer }
-local helpers = require "./helpers.lua"
+local helpers = dofile("./helpers.lua")
 ---@type { isColorLight: fun(str: string): boolean; load_highlights: fun(data: string) }
-local highlights = require "./highlights.lua"
+local highlights = dofile("./highlights.lua")
 
 -- Initialize the channel
 if not Twitch_JobId then Twitch_JobId = 0 end

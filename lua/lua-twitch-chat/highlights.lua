@@ -1,5 +1,5 @@
 ---@type { splitString: fun(name: string, delimiter: string): table; stringToBinary: fun(str: string): string; getOperatingSystem: fun(): string }
-local helpers = require "./helpers.lua"
+local helpers = dofile("./helpers.lua")
 
 --- @param hexCode string
 local function isColorLight(hexCode)

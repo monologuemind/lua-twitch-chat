@@ -1,5 +1,5 @@
 ---@type { splitString: fun(name: string, delimiter: string): table; stringToBinary: fun(str: string): string; getOperatingSystem: fun(): string; tablelength: fun(T: table): integer }
-local helpers = require "./helpers.lua"
+local helpers = dofile("./helpers.lua")
 
 ---@param twitch_init fun(opts: { nickname: string, client_id: string, oauth_port: string, chat_log_path: string })
 function ConfigureCommands(twitch_init)
