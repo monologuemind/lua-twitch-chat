@@ -42,7 +42,9 @@ local function configureCommands(twitch_init)
   end, { nargs = "*" })
 
   vim.api.nvim_create_user_command("TwitchOAuth", function()
-    if Twitch_JobId ~ 0 then vim.cmd("TwitchSetup") end
+    if Twitch_JobId == 0 or Twitch_JobId == -1 then
+      vim.cmd("TwitchSetup")
+    end
     vim.rpcnotify(Twitch_JobId, Twitch_Oauth)
   end, { nargs = "?" })
 
