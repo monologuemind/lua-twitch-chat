@@ -1,6 +1,6 @@
-local helpers = require("lua-twitch-chat.helpers")
-local highlights = require("lua-twitch-chat.highlights")
-local commands = require("lua-twitch-chat.commands")
+local helpers = require("twitch-chat.helpers")
+local highlights = require("twitch-chat.highlights")
+local commands = require("twitch-chat.commands")
 
 -- Initialize the channel
 if not Twitch_JobId then Twitch_JobId = 0 end
@@ -16,8 +16,7 @@ Twitch_Join = 'join'
 Twitch_Authed = false
 
 -- The path to the binary that was created out of 'cargo build' or 'cargo build --release'. This will generally be 'target/release/name'
-Target_Application =
-'/home/michaelbuser/Documents/git/nvim-plugins/lua-twitch-chat/socket/target/debug/socket'
+Target_Application = ''
 
 -- Just a table that we will return with some stuff on it
 MyTable = {}
@@ -128,8 +127,15 @@ function Connect(opts)
   end
 end
 
---- @param opts { nickname: string, client_id: string, oauth_port: string, chat_log_path: string, auto_start: boolean }
+--- @param opts { nickname: string, client_id: string, oauth_port: string, chat_log_path: string, auto_start: boolean, target_application: string }
 MyTable.setup = function(opts)
+  if opts.target_application ~= nil then
+    vim.notify("target_application is required to run the rpc backend.",
+      vim.log.levels.ERROR)
+    return
+  end
+  Target_Application = opts.target_application
+
   -- Setting up the exit of the editor to also stop the socket
   local twitch_group = vim.api.nvim_create_augroup("TwitchSocket",
     { clear = true })

@@ -1,4 +1,4 @@
-local helpers = require("lua-twitch-chat.helpers")
+local helpers = require("twitch-chat.helpers")
 
 ---@param twitch_init fun(opts: { nickname: string, client_id: string, oauth_port: string, chat_log_path: string })
 local function configureCommands(twitch_init)

@@ -1,4 +1,4 @@
-local helpers = require("lua-twitch-chat.helpers")
+local helpers = require("twitch-chat.helpers")
 
 --- @param hexCode string
 local function isColorLight(hexCode)
