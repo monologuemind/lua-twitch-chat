@@ -30,8 +30,10 @@ local load_highlights = function(data)
   end
   for hex_code, user_names in pairs(hex_groups) do
     local binary_code = helpers.stringToBinary(hex_code)
-    local background = "#ffffff"
-    if isColorLight(hex_code) then background = "#000000" end
+    -- I think this worked but the white background just looks bad
+    -- local background = "#ffffff"
+    -- if isColorLight(hex_code) then background = "#000000" end
+    local background = "#000000"
     vim.api.nvim_set_hl(0, binary_code,
       { fg = hex_code, bg = background, bold = true })
     for _, user_name in pairs(user_names) do
