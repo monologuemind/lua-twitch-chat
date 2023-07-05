@@ -129,7 +129,7 @@ end
 
 --- @param opts { nickname: string, client_id: string, oauth_port: string, chat_log_path: string, auto_start: boolean, target_application: string }
 MyTable.setup = function(opts)
-  if opts.target_application ~= nil then
+  if opts.target_application == nil then
     vim.notify("target_application is required to run the rpc backend.",
       vim.log.levels.ERROR)
     return
