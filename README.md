@@ -9,17 +9,21 @@ A twitch chat client for neovim
 
 # Features
 
-[] Figure out how to handle the rust portion of this plugin (precompile, or add instructions for user to compile)
-
 - [x] Twitch OAuth login
-- [x] Twitch chat log
-      [:construction:] Twitch chat log auto scroll
-  - Works when chat log is current buffer
 - [x] Twitch user name highlight
-      [:large_orange_diamond:] Twitch emote support
+- [x] Twitch chat log (just a file with auto watch and auto scroll, so integrates with other plugins well)
+- [ ] :construction: Twitch chat log auto scroll
+  - Works when chat log is current buffer but otherwise does not
+- [ ] :construction: Twitch emote support
   - I have tried a few options without much progress:
-    - Attempt at converting images into icons for an icon font (large SVG paths and either lack of or no color multi color support)
+    - Attempt at converting images into icons for an icon font (large SVG paths and either lack of or no color/multi-color support)
     - Looked at image rendering in terminals (nothing consistent between terminal options)
+- [ ] Figure out how to handle the rust portion of this plugin (precompile, or add instructions for user to compile)
+- [ ] Add support joining multiple channels at a time
+- [ ] Add support sending messages in channels (including commands)
+- [ ] Add support a combined view of the multiple channels
+- [ ] Look into neovim feature hacks ("hover" over user and reply/ban/timeout)
+- [ ] Additional Twitch API support (there is a lot that this could be broken down into)
 
 # Setup
 
@@ -51,8 +55,8 @@ You will then need to add the plugin to your lua user files. There a few differe
 
 # Command list (partial)
 
-| Command     | Description                                                                                     |
-| ----------- | ----------------------------------------------------------------------------------------------- |
-| TwitchOAuth | Starts a server to handle OAuth process                                                         |
-| TwitchJoin  | Joins a twitch chat, "TwitchJoin nl_kripp". Will also initiate TwitchOAuth if it hasn't started |
-| TwitchView  | Attempts to view the current chat log for a channel, "TwitchView nl_kripp"                      |
+| Command     | Description                                                                                      |
+| ----------- | ------------------------------------------------------------------------------------------------ |
+| TwitchOAuth | Starts a server to handle OAuth process, and opens a webpage to the redirect url                 |
+| TwitchJoin  | Joins a twitch chat, ":TwitchJoin nl_kripp". Will also initiate TwitchOAuth if it hasn't started |
+| TwitchView  | Attempts to view the current chat log for a channel, ":TwitchView nl_kripp"                      |
